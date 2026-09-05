@@ -1,0 +1,23 @@
+{
+  "name": "tessellate",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Design-tool plugins for the Figma-shaped model: a host-agnostic core (snapshot \u2192 diff \u2192 plan \u2192 apply) and per-host plugins.",
+  "type": "module",
+  "scripts": {
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "test": "vitest run",
+    "build": "pnpm -r build",
+    "typecheck": "tsc --noEmit -p packages/core && tsc --noEmit -p packages/figma"
+  },
+  "packageManager": "pnpm@10.33.0",
+  "devDependencies": {
+    "@biomejs/biome": "2.5.1",
+    "@types/culori": "^4.0.1",
+    "@types/node": "^26.4.1",
+    "@types/semver": "^7.8.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.6"
+  }
+}
