@@ -22,7 +22,7 @@ snapshot  →  diff  →  plan  →  apply
 
 | Package | What |
 | --- | --- |
-| `packages/core` | the pipeline, model intake (schema-validated, version-pinned), fake-host test kit |
+| `packages/core` | the pipeline, model intake (schema-validated, version-pinned — the model's contract version is `draft.NN` until its shape is declared stable, then `YYYY.MM`), fake-host test kit |
 | `packages/figma` | the Figma plugin: model intake, diff preview, apply (`pnpm --filter @tessellate/figma build` → `dist/`, load `manifest.json` as a development plugin) |
 
 ## Developing

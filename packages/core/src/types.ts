@@ -9,8 +9,8 @@ import type { FigmaType } from '@vertekum/ext-export-figma';
 export interface Stamp {
   /** The vertekum token path (slash form) this entity was created from. */
   path: string;
-  /** The model version that applied it. */
-  modelVersion: number;
+  /** The model CONTRACT version (`draft.NN` / `YYYY.MM`) that applied it — not a content revision. */
+  modelVersion: string;
   /** Stable JSON of the values as APPLIED — what makes drift detectable, not name-guessed. */
   applied: string;
 }

@@ -23,7 +23,7 @@ import {
 function stampFor(
   collection: string,
   name: string,
-  version: number,
+  version: string,
   applied: string,
 ): Stamp {
   return { path: `${collection}:${name}`, modelVersion: version, applied };

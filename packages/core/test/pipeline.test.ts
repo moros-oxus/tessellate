@@ -19,8 +19,14 @@ async function model() {
 }
 
 test('intake validates and pins the version', async () => {
-  const bad = await readModel('{"version": 99}');
-  expect('issues' in bad && bad.issues[0]?.message).toMatch(/version 99/);
+  const preDraft = await readModel('{"version": 1}');
+  expect('issues' in preDraft && preDraft.issues[0]?.message).toMatch(
+    /version 1 predates versioned drafts — re-export/,
+  );
+  const unsupported = await readModel('{"version": "draft.02"}');
+  expect('issues' in unsupported && unsupported.issues[0]?.message).toMatch(
+    /version "draft\.02" is not supported/,
+  );
   const notJson = await readModel('nope');
   expect('issues' in notJson && notJson.issues[0]?.message).toMatch(/not JSON/);
   expect('model' in (await readModel(FIXTURE))).toBe(true);

@@ -10,7 +10,11 @@ import MODEL_SCHEMA from './model.schema.json';
  * drift fails the gate instead of skewing validation.)
  */
 
-export const SUPPORTED_MODEL_VERSIONS = [1];
+/**
+ * Contract versions this intake understands — exactly the vendored schema's (a test pins them).
+ * `draft.NN` while the model's shape is unstable, `YYYY.MM` once declared stable.
+ */
+export const SUPPORTED_MODEL_VERSIONS: readonly string[] = ['draft.01'];
 
 export interface ModelIssue {
   path: string;
@@ -36,17 +40,15 @@ export async function readModel(
 
   const version = (parsed as { version?: unknown })?.version;
   if (
-    typeof version !== 'number' ||
+    typeof version !== 'string' ||
     !SUPPORTED_MODEL_VERSIONS.includes(version)
   ) {
-    return {
-      issues: [
-        {
-          path: '/version',
-          message: `model version ${JSON.stringify(version)} is not supported (supported: ${SUPPORTED_MODEL_VERSIONS.join(', ')})`,
-        },
-      ],
-    };
+    // Integer versions predate the draft/calendar scheme — name the fix, not just the refusal.
+    const message =
+      typeof version === 'number'
+        ? `model version ${version} predates versioned drafts — re-export with @vertekum/ext-export-figma 0.4 or newer`
+        : `model version ${JSON.stringify(version)} is not supported (supported: ${SUPPORTED_MODEL_VERSIONS.join(', ')})`;
+    return { issues: [{ path: '/version', message }] };
   }
 
   const AjvModule = await import('ajv/dist/2020.js');
