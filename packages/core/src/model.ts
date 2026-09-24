@@ -14,7 +14,7 @@ import MODEL_SCHEMA from './model.schema.json';
  * Contract versions this intake understands — exactly the vendored schema's (a test pins them).
  * `draft.NN` while the model's shape is unstable, `YYYY.MM` once declared stable.
  */
-export const SUPPORTED_MODEL_VERSIONS: readonly string[] = ['draft.01'];
+export const SUPPORTED_MODEL_VERSIONS: readonly string[] = ['draft.02'];
 
 export interface ModelIssue {
   path: string;

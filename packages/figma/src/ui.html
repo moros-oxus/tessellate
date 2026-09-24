@@ -1,5 +1,6 @@
 <div id="app">
   <h2>Tessellate</h2>
+  <section id="status" class="status" hidden></section>
   <p class="hint">
     Drop a <code>figma.model.json</code> (from <code>vertekum build</code>) or
     <label class="pick">choose a file<input id="pick" type="file" accept=".json" /></label>
@@ -8,6 +9,11 @@
   <label class="hint"
     ><input id="limited" type="checkbox" /> limited-modes seat (split collections)</label
   >
+  <div id="mismatch" class="mismatch" hidden>
+    <span id="mismatch-text"></span>
+    <button id="rebind" type="button">Rebind this file</button>
+  </div>
+  <div id="compositions" class="compositions" hidden></div>
   <div id="summary" class="summary">no model loaded</div>
   <div id="report" class="report"></div>
   <ul id="notes" class="notes"></ul>
@@ -17,21 +23,29 @@
 <style>
   body { font: 11px/1.5 -apple-system, system-ui, sans-serif; margin: 0; padding: 12px; }
   h2 { margin: 0 0 8px; font-size: 13px; }
+  button { margin-top: 10px; padding: 6px 14px; }
   .hint { color: #555; margin: 4px 0; }
   .pick input { display: none; }
   .pick { text-decoration: underline; cursor: pointer; }
+  .status { background: #f1f3f5; border-radius: 4px; padding: 6px 8px; margin: 0 0 8px; }
+  .status dl { display: grid; grid-template-columns: auto 1fr; gap: 0 8px; margin: 4px 0 0; }
+  .status dt { color: #777; }
+  .status dd { margin: 0; }
+  .mismatch { background: #fff4e6; border: 1px solid #e8590c; border-radius: 4px; padding: 6px 8px; margin: 8px 0; }
+  .mismatch button { margin: 6px 0 0; padding: 3px 10px; }
+  .compositions { color: #555; margin: 6px 0; }
+  .compositions ul { padding-left: 14px; margin: 2px 0; }
   .summary { margin: 10px 0 6px; }
   .report { color: #c92a2a; margin: 4px 0; }
   .report ul { padding-left: 14px; margin: 2px 0; }
   .notes { color: #777; padding-left: 16px; margin: 4px 0; }
-  .detail { max-height: 320px; overflow-y: auto; border-top: 1px solid #eee; padding-top: 6px; }
+  .detail { max-height: 280px; overflow-y: auto; border-top: 1px solid #eee; padding-top: 6px; }
   .detail ul { padding-left: 14px; margin: 4px 0; }
   .badge { border-radius: 3px; padding: 0 4px; font-size: 10px; color: #fff; }
   .badge.add { background: #2f9e44; }
   .badge.update { background: #1971c2; }
   .badge.drift { background: #e8590c; }
   .badge.unchanged { background: #adb5bd; }
-  button { margin-top: 10px; padding: 6px 14px; }
   code { font-size: 10px; }
 </style>
 <script>/*UI_SCRIPT*/</script>

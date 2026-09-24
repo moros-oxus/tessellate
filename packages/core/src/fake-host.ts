@@ -1,3 +1,4 @@
+import { type Binding, parseBinding } from './binding';
 import {
   type HostAdapter,
   type HostSnapshot,
@@ -15,6 +16,8 @@ import {
 export class FakeHost implements HostAdapter {
   collections = new Map<string, SnapshotCollection>();
   styles = new Map<string, SnapshotStyle>();
+  /** The document-level binding, stored as a host stores it: serialized. */
+  binding: string | undefined;
   private capacity: number | undefined;
 
   constructor(options: { modeCapacity?: number } = {}) {
@@ -101,6 +104,14 @@ export class FakeHost implements HostAdapter {
     stamp: Stamp;
   }): Promise<void> {
     this.styles.set(style.name, { kind: 'text', ...style });
+  }
+
+  async readBinding(): Promise<Binding | undefined> {
+    return parseBinding(this.binding ?? '');
+  }
+
+  async writeBinding(binding: Binding): Promise<void> {
+    this.binding = JSON.stringify(binding);
   }
 
   /** Test helper: a host-side edit tessellate did not make (drift). */

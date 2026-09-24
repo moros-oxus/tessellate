@@ -1,4 +1,5 @@
-import type { FigmaCollection, FigmaModel } from '@vertekum/ext-export-figma';
+import type { FigmaModel } from '@vertekum/ext-export-figma';
+import { fit, partOf } from './layout';
 import type { ModelDiff } from './types';
 import {
   appliedForm,
@@ -16,8 +17,8 @@ import {
  *
  * Seat-aware modes: when the host's mode capacity is known and a collection exceeds it, the
  * `split-collections` fallback rewrites that collection into sibling single-mode collections
- * (`color-mode/dark`) — decided at plan time, visible in the plan's notes, superseding any
- * static output-side strategy.
+ * (`color-mode/dark`) — decided by `fit` (shared with diff), visible in the plan's notes,
+ * superseding any static output-side strategy.
  */
 
 function stampFor(
@@ -27,48 +28,6 @@ function stampFor(
   applied: string,
 ): Stamp {
   return { path: `${collection}:${name}`, modelVersion: version, applied };
-}
-
-interface SplitCollection {
-  name: string;
-  modes: string[];
-  source: FigmaCollection;
-  /** mode-in-model → mode-in-host for this (possibly split) collection. */
-  modeName: (mode: string) => string;
-}
-
-function fit(
-  collection: FigmaCollection,
-  capacity: number | undefined,
-  policy: PlanPolicy,
-  notes: string[],
-): SplitCollection[] {
-  if (capacity === undefined || collection.modes.length <= capacity) {
-    return [
-      {
-        name: collection.name,
-        modes: collection.modes,
-        source: collection,
-        modeName: (mode) => mode,
-      },
-    ];
-  }
-  if (policy.modeFallback === 'fail') {
-    throw new Error(
-      `collection '${collection.name}' needs ${collection.modes.length} modes; the seat allows ${capacity}`,
-    );
-  }
-  notes.push(
-    `collection '${collection.name}' exceeds the seat's ${capacity} mode(s) — split into ${collection.modes
-      .map((m) => `'${collection.name}/${m}'`)
-      .join(', ')}`,
-  );
-  return collection.modes.map((mode) => ({
-    name: `${collection.name}/${mode}`,
-    modes: [mode],
-    source: collection,
-    modeName: () => mode,
-  }));
 }
 
 export function plan(
@@ -97,50 +56,38 @@ export function plan(
     ) {
       continue;
     }
-    for (const part of fit(collection, capacity, policy, notes)) {
+    const { parts, note } = fit(collection, capacity, policy);
+    if (note) notes.push(note);
+    for (const part of parts) {
       ops.push({ op: 'ensureCollection', collection: part.name });
       for (const mode of part.modes) {
-        ops.push({
-          op: 'ensureMode',
-          collection: part.name,
-          mode: part.modeName(mode),
-        });
+        ops.push({ op: 'ensureMode', collection: part.name, mode });
       }
       for (const variable of collection.variables) {
         if (!changed.has(variable.name)) continue;
-        const valuesByMode: Record<string, unknown> = {};
-        const modeAliases: Array<{ mode: string; target: string }> = [];
-        for (const mode of part.modes) {
-          const hostMode = part.modeName(mode);
-          const alias = variable.alias?.[mode];
-          if (alias !== undefined) {
-            modeAliases.push({ mode: hostMode, target: alias });
-            continue;
-          }
-          if (variable.valuesByMode[mode] !== undefined) {
-            valuesByMode[hostMode] = variable.valuesByMode[mode];
-          }
-        }
+        const { valuesByMode, alias } = partOf(variable, part);
         ops.push({
           op: 'upsertVariable',
           collection: part.name,
           name: variable.name,
           type: variable.type,
           valuesByMode,
+          // The stamp records what THIS part holds, in host mode names — a split part holds
+          // one mode, and drift is measured against exactly that.
           stamp: stampFor(
             part.name,
             variable.name,
             model.version,
-            appliedForm(variable.valuesByMode, variable.alias),
+            appliedForm(valuesByMode, alias),
           ),
         });
-        for (const bound of modeAliases) {
+        for (const [mode, target] of Object.entries(alias)) {
           aliases.push({
             op: 'bindAlias',
             collection: part.name,
             name: variable.name,
-            mode: bound.mode,
-            target: bound.target,
+            mode,
+            target,
           });
         }
       }

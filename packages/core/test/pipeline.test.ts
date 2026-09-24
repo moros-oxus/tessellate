@@ -23,9 +23,9 @@ test('intake validates and pins the version', async () => {
   expect('issues' in preDraft && preDraft.issues[0]?.message).toMatch(
     /version 1 predates versioned drafts — re-export/,
   );
-  const unsupported = await readModel('{"version": "draft.02"}');
+  const unsupported = await readModel('{"version": "draft.01"}');
   expect('issues' in unsupported && unsupported.issues[0]?.message).toMatch(
-    /version "draft\.02" is not supported/,
+    /version "draft\.01" is not supported \(supported: draft\.02\)/,
   );
   const notJson = await readModel('nope');
   expect('issues' in notJson && notJson.issues[0]?.message).toMatch(/not JSON/);
@@ -87,7 +87,7 @@ test('seat-aware modes: over-capacity collections split, and the plan says so', 
   const m = await model();
   const host = new FakeHost({ modeCapacity: 1 });
 
-  const p = plan(m, diff(m, await host.snapshot()), host.modeCapacity());
+  const p = plan(m, diff(m, await host.snapshot(), 1), 1);
   expect(p.notes.join(' ')).toMatch(
     /split into 'color-mode\/light', 'color-mode\/dark'/,
   );
@@ -96,10 +96,20 @@ test('seat-aware modes: over-capacity collections split, and the plan says so', 
   expect(host.collections.has('color-mode/dark')).toBe(true);
   expect(host.collections.get('color-mode/dark')?.modes).toEqual(['dark']);
 
-  // Still idempotent in split form? A re-diff sees the split names as absent from the model,
-  // but the plan is derived from the same fit — re-applying changes nothing.
-  const again = await apply(plan(m, diff(m, await host.snapshot()), 1), host);
-  expect(again.failed).toEqual([]);
+  // Idempotent in split form: diff looks for the split siblings the plan wrote, so the
+  // re-diff is clean and there is nothing left to apply.
+  const again = diff(m, await host.snapshot(), 1);
+  expect(again.counts.add + again.counts.update + again.counts.drift).toBe(0);
+  expect(plan(m, again, 1).ops).toEqual([]);
+
+  // …and a host edit inside one split part is drift, named by part.
+  host.edit('color-mode/dark', 'color/accent', 'dark', { r: 1, g: 1, b: 1 });
+  const drifted = diff(m, await host.snapshot(), 1);
+  const accent = drifted.collections
+    .find((c) => c.name === 'color-mode')
+    ?.variables.find((v) => v.name === 'color/accent');
+  expect(accent?.state).toBe('drift');
+  expect(accent?.details.join(' ')).toMatch(/^color-mode\/dark: /);
 });
 
 test('text styles apply with their bindings; the policy states its deletes', async () => {

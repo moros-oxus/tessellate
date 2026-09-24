@@ -1,4 +1,5 @@
 import type { FigmaType } from '@vertekum/ext-export-figma';
+import type { Binding } from './binding';
 
 /**
  * The host-agnostic vocabulary. Core never imports a host API — each plugin package implements
@@ -69,6 +70,9 @@ export interface HostAdapter {
     properties: Array<{ property: string; value: unknown; variable?: string }>;
     stamp: Stamp;
   }): Promise<void>;
+  /** The artifact this document tracks — document-level storage, shared by collaborators. */
+  readBinding(): Promise<Binding | undefined>;
+  writeBinding(binding: Binding): Promise<void>;
 }
 
 export type VariableState = 'add' | 'update' | 'unchanged' | 'drift';
@@ -173,16 +177,48 @@ export function normalizeNumbers(value: unknown): unknown {
  * concrete value is EXCLUDED, and numbers are normalized (see `normalizeNumbers`). `desired`
  * (model), `held` (host), and the stamp's `applied` all use this one form — which is what
  * makes "no-op re-diff" and drift detection honest.
+ *
+ * `modes` projects the form onto the modes tessellate wrote. A host may hold a value in EVERY
+ * mode (Figma does) where the model had none — a variable a composition lacks, in that
+ * composition's modes — and those host-filled values are neither the model's nor drift.
  */
 export function appliedForm(
   valuesByMode: Record<string, unknown>,
   alias: Record<string, string> | undefined,
+  modes?: ReadonlySet<string>,
 ): string {
   const values: Record<string, unknown> = {};
+  const aliases: Record<string, string> = {};
   for (const [mode, value] of Object.entries(valuesByMode)) {
+    if (modes && !modes.has(mode)) continue;
     if (alias?.[mode] === undefined) values[mode] = normalizeNumbers(value);
   }
-  return stable({ values, alias: alias ?? {} });
+  for (const [mode, target] of Object.entries(alias ?? {})) {
+    if (modes && !modes.has(mode)) continue;
+    aliases[mode] = target;
+  }
+  return stable({ values, alias: aliases });
+}
+
+/** The modes a variable's form covers — values and aliases alike. */
+export function formModes(
+  valuesByMode: Record<string, unknown>,
+  alias: Record<string, string> | undefined,
+): Set<string> {
+  return new Set([...Object.keys(valuesByMode), ...Object.keys(alias ?? {})]);
+}
+
+/** The modes a stamp's `applied` form covers; `undefined` when the stamp is unreadable. */
+export function stampModes(stamp: Stamp): Set<string> | undefined {
+  try {
+    const parsed = JSON.parse(stamp.applied) as {
+      values?: Record<string, unknown>;
+      alias?: Record<string, string>;
+    };
+    return formModes(parsed.values ?? {}, parsed.alias);
+  } catch {
+    return undefined;
+  }
 }
 
 /** Stable JSON (sorted keys) — the stamp's `applied` and every value comparison use it. */

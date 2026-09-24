@@ -1,19 +1,30 @@
-import type {
-  HostAdapter,
-  HostSnapshot,
-  SnapshotCollection,
-  SnapshotVariable,
-  Stamp,
+import {
+  type Binding,
+  type HostAdapter,
+  type HostSnapshot,
+  parseBinding,
+  type SnapshotCollection,
+  type SnapshotVariable,
+  type Stamp,
 } from '@tessellate/core';
 
 /**
  * The Figma implementation of the host adapter — the only file that talks to `figma.*`.
  * Identity: every entity tessellate writes carries a `tessellate` plugin-data stamp
  * (path, model version, applied form), which is what makes re-import idempotent and
- * drift detectable rather than name-guessed.
+ * drift detectable rather than name-guessed. The file's binding lives on the document
+ * (`figma.root`), so it is shared by every collaborator and travels with the file.
  */
 
 const STAMP_KEY = 'tessellate';
+const BINDING_KEY = 'tessellate:binding';
+/** Must match a `relaunchButtons` command in manifest.json. */
+export const RELAUNCH_COMMAND = 'open';
+
+/** `2026-09-23T12:00:00.000Z` → `2026-09-23 12:00 UTC`. */
+export function when(iso: string): string {
+  return `${iso.slice(0, 16).replace('T', ' ')} UTC`;
+}
 
 function readStamp(node: {
   getPluginData(key: string): string;
@@ -80,6 +91,18 @@ export class FigmaAdapter implements HostAdapter {
       stamp: readStamp(style),
     }));
     return { collections, styles };
+  }
+
+  async readBinding(): Promise<Binding | undefined> {
+    return parseBinding(figma.root.getPluginData(BINDING_KEY));
+  }
+
+  async writeBinding(binding: Binding): Promise<void> {
+    figma.root.setPluginData(BINDING_KEY, JSON.stringify(binding));
+    // The file's properties panel (nothing selected) carries a button back into the plugin.
+    figma.root.setRelaunchData({
+      [RELAUNCH_COMMAND]: `${binding.label} — last applied ${when(binding.appliedAt)}`,
+    });
   }
 
   modeCapacity(): number | undefined {

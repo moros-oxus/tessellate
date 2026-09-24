@@ -10,8 +10,8 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@vertekum/core": "^0.4.0",
-    "@vertekum/ext-export-figma": "^0.4.0",
+    "@vertekum/core": "^0.8.0",
+    "@vertekum/ext-export-figma": "^0.8.0",
     "ajv": "^8.20.0"
   }
 }

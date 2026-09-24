@@ -4,7 +4,14 @@ export type {
   FigmaVariable,
 } from '@vertekum/ext-export-figma';
 export { type ApplyReport, apply } from './apply';
-export { diff } from './diff';
+export {
+  type Binding,
+  bindingFor,
+  mismatch,
+  parseBinding,
+} from './binding';
+export { type CompositionReadout, compositionReadout } from './compositions';
+export { diff, type HostDrift, hostDrift } from './diff';
 export { FakeHost } from './fake-host';
 export {
   type ModelIssue,
