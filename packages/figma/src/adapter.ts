@@ -7,6 +7,7 @@ import {
   type SnapshotVariable,
   type Stamp,
 } from '@tessellate/core';
+import { fontStyleFor, weightOf } from './font';
 
 /**
  * The Figma implementation of the host adapter — the only file that talks to `figma.*`.
@@ -199,6 +200,17 @@ export class FigmaAdapter implements HostAdapter {
     );
   }
 
+  /** Available fonts, read once per adapter — the list is large and does not change mid-apply. */
+  private fonts: Promise<Font[]> | undefined;
+
+  /** The style names a family offers in this file's environment; empty when it is not installed. */
+  private async stylesOf(family: string): Promise<string[]> {
+    this.fonts ??= figma.listAvailableFontsAsync();
+    return (await this.fonts)
+      .filter((font) => font.fontName.family === family)
+      .map((font) => font.fontName.style);
+  }
+
   async upsertTextStyle(wanted: {
     name: string;
     properties: Array<{ property: string; value: unknown; variable?: string }>;
@@ -212,9 +224,14 @@ export class FigmaAdapter implements HostAdapter {
       wanted.properties.find((p) => p.property === property)?.value;
     const family = get('font-family');
     if (typeof family === 'string') {
+      const name = family.split(',')[0]?.trim() ?? family;
+      // The weight picks one of the family's OWN style names (they differ per family).
       const fontName = {
-        family: family.split(',')[0]?.trim() ?? family,
-        style: 'Regular',
+        family: name,
+        style: fontStyleFor(
+          weightOf(get('font-weight')),
+          await this.stylesOf(name),
+        ),
       };
       await figma.loadFontAsync(fontName);
       style.fontName = fontName;

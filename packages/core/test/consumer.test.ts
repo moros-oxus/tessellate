@@ -41,7 +41,7 @@ test('a binding names the artifact, its compositions, version and time', async (
   expect(binding).toEqual({
     target: 'figma-brands',
     compositions: ['default', 'alt'],
-    modelVersion: 'draft.02',
+    modelVersion: 'draft.03',
     appliedAt: '2026-09-23T12:00:00.000Z',
     label: 'figma-brands · default + alt',
   });
