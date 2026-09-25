@@ -30,11 +30,11 @@ importers:
   packages/core:
     dependencies:
       '@vertekum/core':
-        specifier: ^0.8.0
-        version: 0.8.0
+        specifier: ^0.9.0
+        version: 0.9.0
       '@vertekum/ext-export-figma':
-        specifier: ^0.8.0
-        version: 0.8.0(@vertekum/core@0.8.0)
+        specifier: ^0.9.0
+        version: 0.9.0(@vertekum/core@0.9.0)
       ajv:
         specifier: ^8.20.0
         version: 8.20.0
@@ -586,16 +586,16 @@ packages:
   '@types/semver@7.8.0':
     resolution: {integrity: sha512-1mAINjtQCXXeLkJ9ehXkwOcBpqtLxiVtKhpUf83DdRNdQKV0iXZpaHYqRr7nj+wvxuJzoAmAwXI+sCNMv1CzLQ==}
 
-  '@vertekum/core@0.8.0':
-    resolution: {integrity: sha512-YHt8QCKjWSP9bn8pVTE9/bB4s2Qy4qGlUzFiXNdOU8g+zBvH8IWWV3tpoT2+MQg2r5q8d1cYeaqr+jcKy+7iSQ==}
+  '@vertekum/core@0.9.0':
+    resolution: {integrity: sha512-BuL2cV0O+N16gNFRfEOm/oQjzjSpD16bAHm669Nu+K05Q0Zsdd6McvxMLsFxQpOBtj4KXLAZjUSDCs2B+NXN0Q==}
 
-  '@vertekum/ext-export-figma@0.8.0':
-    resolution: {integrity: sha512-pueLW0xdMlaDxSbXMMFdbdrSxRoaEN9v2DuHGs9g7C0HRkqL4Q8fWM5+28x/Ij865iwGdiUVRXtMkjH9qMtFcA==}
+  '@vertekum/ext-export-figma@0.9.0':
+    resolution: {integrity: sha512-lBR1z38vJl1CgK51z0zWG4piAAh6XJfhsupgia8EO88WmOqnRXTtdGDjPzJnN/PeEjYKU9d6mBXVlqyKxAZ/zQ==}
     peerDependencies:
-      '@vertekum/core': 0.8.0
+      '@vertekum/core': 0.9.0
 
-  '@vertekum/schema-dtcg@0.8.0':
-    resolution: {integrity: sha512-TOm1FVhI65aK6PR7dDmX0Lt9oZs5zWLCJxNYurJgTJEX5ruLchRDjNsxgmD7KczijtWL1ElPW8HGycmpXo/EQA==}
+  '@vertekum/schema-dtcg@0.9.0':
+    resolution: {integrity: sha512-v+Rt0HFsgckwZ+p6F4CUVKZSaqC01qvuLlExvFFSEuXaa1YM3zU4gFPbcoSxzmSkMh84g7s1lw1YG/x9myLRgg==}
 
   '@vitest/expect@3.2.7':
     resolution: {integrity: sha512-E8eBXaKibuvH2pSZErOjdVb5vF4PbKYcrnluBTYxEk1l/VhhwZg1kZQsdtjq+CsF5CFydf2Rdkz7jDHKSisi3w==}
@@ -1170,20 +1170,20 @@ snapshots:
 
   '@types/semver@7.8.0': {}
 
-  '@vertekum/core@0.8.0':
+  '@vertekum/core@0.9.0':
     dependencies:
-      '@vertekum/schema-dtcg': 0.8.0
+      '@vertekum/schema-dtcg': 0.9.0
       ajv: 8.20.0
       culori: 4.0.2
       semver: 7.8.5
       zod: 3.25.76
 
-  '@vertekum/ext-export-figma@0.8.0(@vertekum/core@0.8.0)':
+  '@vertekum/ext-export-figma@0.9.0(@vertekum/core@0.9.0)':
     dependencies:
-      '@vertekum/core': 0.8.0
+      '@vertekum/core': 0.9.0
       zod: 3.25.76
 
-  '@vertekum/schema-dtcg@0.8.0': {}
+  '@vertekum/schema-dtcg@0.9.0': {}
 
   '@vitest/expect@3.2.7':
     dependencies:
