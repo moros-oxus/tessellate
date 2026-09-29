@@ -41,7 +41,7 @@ test('a binding names the artifact, its compositions, version and time', async (
   expect(binding).toEqual({
     target: 'figma-brands',
     compositions: ['default', 'alt'],
-    modelVersion: 'draft.03',
+    modelVersion: 'draft.04',
     appliedAt: '2026-09-23T12:00:00.000Z',
     label: 'figma-brands · default + alt',
   });
@@ -166,4 +166,27 @@ test('capacity 4: the merged collection fits whole', async () => {
   ]);
   const again = diff(brands, await host.snapshot(), 4);
   expect(plan(brands, again, 4).ops).toEqual([]);
+});
+
+test('a "not available" sentinel applies like any alias, and re-diffs clean', async () => {
+  // The reference model: acme's berry ramp has no globex counterpart, so globex's modes alias
+  // the NOT_AVAILABLE/COLOR sentinel, which lives in its own collection.
+  const reference = await fixture('reference');
+  expect(reference.source.notAvailable?.variables.COLOR).toBe(
+    'NOT_AVAILABLE/COLOR',
+  );
+  const host = new FakeHost();
+  await applied(reference, host);
+
+  const berry = host.collections
+    .get('palette')
+    ?.variables.find((v) => v.name === 'color/berry/500');
+  expect(berry?.alias).toEqual({ globex: 'NOT_AVAILABLE/COLOR' });
+  expect(host.collections.get('NOT_AVAILABLE')?.variables[0]?.name).toBe(
+    'NOT_AVAILABLE/COLOR',
+  );
+
+  const again = diff(reference, await host.snapshot());
+  expect(again.counts.add + again.counts.update + again.counts.drift).toBe(0);
+  expect(plan(reference, again, undefined).ops).toEqual([]);
 });

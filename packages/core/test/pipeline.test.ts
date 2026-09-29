@@ -23,9 +23,9 @@ test('intake validates and pins the version', async () => {
   expect('issues' in preDraft && preDraft.issues[0]?.message).toMatch(
     /version 1 predates versioned drafts — re-export/,
   );
-  const unsupported = await readModel('{"version": "draft.02"}');
+  const unsupported = await readModel('{"version": "draft.03"}');
   expect('issues' in unsupported && unsupported.issues[0]?.message).toMatch(
-    /version "draft\.02" is not supported \(supported: draft\.03\)/,
+    /version "draft\.03" is not supported \(supported: draft\.04\)/,
   );
   const notJson = await readModel('nope');
   expect('issues' in notJson && notJson.issues[0]?.message).toMatch(/not JSON/);
