@@ -1,3 +1,8 @@
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./assets/tessellate-lockup-inline-dark.png">
+  <img alt="Tessellate" src="./assets/tessellate-lockup-inline.png">
+</picture>
+
 # tessellate
 
 Design-tool plugins for the **Figma-shaped model** — the versioned artifact
