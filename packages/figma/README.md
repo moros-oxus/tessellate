@@ -54,6 +54,31 @@ must be installed for the style to render in that mode. Line height is applied a
 percentage and never bound, because Figma reads a bound line height as pixels and a token
 line height is a multiplier. The plan notes name every reference left unbound, and why.
 
+## Removed and deprecated tokens
+
+The token files are the source of truth, and the plugin follows them:
+
+- A token **removed** from the source is removed from the file. Everything the plugin
+  made carries its identity stamp, so it knows exactly what it made — a variable or
+  style the model no longer holds shows as **remove** in the preview, and goes on
+  Apply. Anything without a stamp is yours and is never touched. A collection goes with
+  its last variable; modes are kept.
+- A style the exporter now emits under another name — once per composition before
+  (`acme/typography/body`), shared now (`typography/body`) — is the same token: the
+  preview names the replacement, and Apply moves every layer in this file onto it before
+  removing the old style.
+- A **deprecated** token still exists. Its variable or style is kept and its description
+  starts with `Deprecated: <reason>` — a description publishes with the library, so files
+  using it see the warning in their pickers. Your own description text stays below that
+  line. When the deprecation is lifted, the line goes.
+- Switching the limited-modes seat is not a removal: the other layout's collections are
+  kept, and the plan says so.
+
+Removing a published style or variable leaves files that use the library with a detached
+copy once the library is published, and a removed variable leaves layers bound to it with
+their last value. After an apply, the report lists what was removed, moved and deprecated —
+paste it into the library's release notes so those files know what changed.
+
 ## One file to drop
 
 A model may hold **several compositions** — two brands, say — already merged by the

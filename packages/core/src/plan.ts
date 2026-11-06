@@ -40,7 +40,17 @@ export function plan(
   capacity: number | undefined,
   policy: PlanPolicy = DEFAULT_POLICY,
 ): Plan {
-  const notes: string[] = [`deletes: ${policy.deletes} (policy)`];
+  const gone = diffed.retired;
+  const retiredCount = gone.variables.length + gone.styles.length;
+  const notes: string[] = [
+    policy.deletes === 'retired'
+      ? 'deletes: retired entities (policy)'
+      : `deletes: never (policy)${
+          retiredCount > 0
+            ? ` — ${retiredCount} retired entit${retiredCount === 1 ? 'y' : 'ies'} kept`
+            : ''
+        }`,
+  ];
   const ops: Op[] = [];
   const aliases: Op[] = [];
 
@@ -50,7 +60,7 @@ export function plan(
     );
     const changed = new Set(
       (diffCollection?.variables ?? [])
-        .filter((v) => v.state !== 'unchanged')
+        .filter((v) => v.state !== 'unchanged' && v.state !== 'remove')
         .map((v) => v.name),
     );
     if (
@@ -76,6 +86,9 @@ export function plan(
           name: variable.name,
           type: variable.type,
           valuesByMode,
+          ...(variable.deprecated !== undefined
+            ? { deprecated: variable.deprecated }
+            : {}),
           // The stamp records what THIS part holds, in host mode names — a split part holds
           // one mode, and drift is measured against exactly that.
           stamp: stampFor(
@@ -115,8 +128,39 @@ export function plan(
       name: style.name,
       properties: form.properties,
       bindings: form.bindings,
+      ...(style.deprecated !== undefined
+        ? { deprecated: style.deprecated }
+        : {}),
       stamp: stampFor('styles', style.name, model.version, form.applied),
     });
+  }
+
+  // Retirement LAST: every replacement exists by now, usages move onto it, then the old goes.
+  for (const note of gone.notes) if (!notes.includes(note)) notes.push(note);
+  if (policy.deletes === 'retired' && retiredCount > 0) {
+    for (const style of gone.styles) {
+      if (style.replacement !== undefined) {
+        ops.push({
+          op: 'migrateStyleUsages',
+          from: style.name,
+          to: style.replacement,
+        });
+      }
+    }
+    for (const style of gone.styles) {
+      ops.push({ op: 'removeTextStyle', name: style.name });
+    }
+    for (const { collection, name } of gone.variables) {
+      ops.push({ op: 'removeVariable', collection, name });
+    }
+    for (const collection of gone.collections) {
+      ops.push({ op: 'removeCollection', collection });
+    }
+    if (gone.variables.length > 0) {
+      notes.push(
+        `removing ${gone.variables.length} variable(s) the model no longer holds — layers bound to them keep their last values, unlinked, here and in files using the published library`,
+      );
+    }
   }
 
   return { ops, notes };

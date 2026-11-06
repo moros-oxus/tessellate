@@ -1,5 +1,7 @@
 import type { FigmaModel, FigmaVariable } from '@vertekum/ext-export-figma';
+import { deprecationIn } from './deprecation';
 import { fit, partOf } from './layout';
+import { retired } from './retire';
 import { styleForm } from './style-form';
 import {
   appliedForm,
@@ -67,15 +69,23 @@ function variableState(
   const want = desired(wanted);
   const have = held(hostVar, wanted);
   const isDrift = drifted(hostVar);
+  // A deprecation lives in the description, which a host reads back faithfully.
+  const deprecation = deprecationChange(
+    wanted.deprecated,
+    deprecationIn(hostVar.description),
+  );
   if (want === have) {
-    return isDrift
-      ? {
-          state: 'drift',
-          details: ['host edits match the model — stamp refresh only'],
-        }
+    if (isDrift) {
+      return {
+        state: 'drift',
+        details: ['host edits match the model — stamp refresh only'],
+      };
+    }
+    return deprecation
+      ? { state: 'update', details: [deprecation] }
       : { state: 'unchanged', details: [] };
   }
-  const details: string[] = [];
+  const details: string[] = deprecation ? [deprecation] : [];
   for (const mode of Object.keys(wanted.valuesByMode)) {
     if (wanted.alias?.[mode] !== undefined) continue;
     const a = stable(normalizeNumbers(wanted.valuesByMode[mode]));
@@ -98,6 +108,17 @@ function variableState(
     return { state: 'drift', details };
   }
   return { state: 'update', details };
+}
+
+/** What moves in a deprecation, as a detail; undefined when nothing does. */
+function deprecationChange(
+  wanted: string | undefined,
+  held: string | undefined,
+): string | undefined {
+  if (wanted === held) return undefined;
+  if (held === undefined) return 'marked deprecated';
+  if (wanted === undefined) return 'deprecation lifted';
+  return 'deprecation reworded';
 }
 
 /** One variable's state across the parts it lands in — the worst part speaks for it. */
@@ -133,6 +154,7 @@ export function diff(
     update: 0,
     unchanged: 0,
     drift: 0,
+    remove: 0,
   };
   const collections: CollectionDiff[] = model.collections.map((wanted) => {
     const { parts } = fit(wanted, capacity, policy);
@@ -180,7 +202,39 @@ export function diff(
     return { name: wanted.name, kind: wanted.kind, state };
   });
 
-  return { collections, styles, counts };
+  // What tessellate made that the model no longer holds — listed where it lives.
+  const gone = retired(model, snapshot, capacity, policy);
+  for (const { collection, name } of gone.variables) {
+    let entry = collections.find((c) => c.name === collection);
+    if (!entry) {
+      entry = {
+        name: collection,
+        exists: true,
+        missingModes: [],
+        variables: [],
+      };
+      collections.push(entry);
+    }
+    const type =
+      snapshot.collections
+        .find((c) => c.name === collection)
+        ?.variables.find((v) => v.name === name)?.type ?? 'STRING';
+    entry.variables.push({ name, type, state: 'remove', details: [] });
+    counts.remove++;
+  }
+  for (const style of gone.styles) {
+    styles.push({
+      name: style.name,
+      kind: 'text',
+      state: 'remove',
+      ...(style.replacement !== undefined
+        ? { replacement: style.replacement }
+        : {}),
+    });
+    counts.remove++;
+  }
+
+  return { collections, styles, counts, retired: gone };
 }
 
 export interface HostDrift {

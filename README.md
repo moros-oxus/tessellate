@@ -17,10 +17,11 @@ snapshot  →  diff  →  plan  →  apply
   per-host `HostAdapter`;
 - **diff** — model vs host, per variable: add / update / unchanged / **drift**
   (edited in the host since the last apply — detected by identity stamps, not
-  guessed by name);
-- **plan** — an ordered, delete-free, serializable operation list, seat-aware
-  (collections whose modes exceed the seat's capacity split into single-mode
-  siblings, stated in the plan's notes);
+  guessed by name) / **remove** (made by tessellate, no longer in the model);
+- **plan** — an ordered, serializable operation list, seat-aware (collections whose
+  modes exceed the seat's capacity split into single-mode siblings, stated in the
+  plan's notes); what the model no longer holds is removed last, after its
+  replacement exists and its usages have moved;
 - **apply** — the adapter executes; re-importing the same model is a no-op diff.
 
 ## Packages

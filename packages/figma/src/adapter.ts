@@ -7,6 +7,7 @@ import {
   type SnapshotVariable,
   type Stamp,
   type StyleBinding,
+  withDeprecation,
 } from '@tessellate/core';
 import { facesToLoad, fontStyleFor, letterSpacingOf, weightOf } from './font';
 
@@ -91,6 +92,9 @@ export class FigmaAdapter implements HostAdapter {
           type: variable.resolvedType as SnapshotVariable['type'],
           valuesByMode,
           ...(Object.keys(alias).length > 0 ? { alias } : {}),
+          ...(variable.description
+            ? { description: variable.description }
+            : {}),
           stamp: readStamp(variable),
         });
       }
@@ -108,6 +112,7 @@ export class FigmaAdapter implements HostAdapter {
         { property: 'font-family', value: style.fontName.family },
         { property: 'font-size', value: `${style.fontSize}px` },
       ],
+      ...(style.description ? { description: style.description } : {}),
       stamp: readStamp(style),
     }));
     return { collections, styles };
@@ -174,6 +179,7 @@ export class FigmaAdapter implements HostAdapter {
       name: string;
       type: SnapshotVariable['type'];
       valuesByMode: Record<string, unknown>;
+      deprecated?: string;
       stamp: Stamp;
     },
   ): Promise<void> {
@@ -191,7 +197,27 @@ export class FigmaAdapter implements HostAdapter {
         throw new Error(`no mode '${mode}' in '${collectionName}'`);
       variable.setValueForMode(id, value as VariableValue);
     }
+    // The first description line is tessellate's: the deprecation, or nothing. The designer's
+    // own words below it are kept.
+    variable.description = withDeprecation(
+      variable.description,
+      wanted.deprecated,
+    );
     variable.setPluginData(STAMP_KEY, JSON.stringify(wanted.stamp));
+  }
+
+  async removeVariable(collectionName: string, name: string): Promise<void> {
+    const { variable } = await this.variable(collectionName, name);
+    variable?.remove();
+  }
+
+  async removeCollection(name: string): Promise<void> {
+    const collection = await this.collection(name);
+    if (!collection) return;
+    if (collection.variableIds.length > 0) {
+      throw new Error(`collection '${name}' still holds variables`);
+    }
+    collection.remove();
   }
 
   async bindAlias(
@@ -290,6 +316,15 @@ export class FigmaAdapter implements HostAdapter {
           ).map(weightOf)
         : []),
     ];
+    await this.loadFaces(families, weights, plainFace);
+  }
+
+  /** Every face of `families` × `weights` that is installed (see `facesToLoad`). */
+  private async loadFaces(
+    families: string[],
+    weights: Array<number | undefined>,
+    plainFace: FontName | undefined,
+  ): Promise<void> {
     this.fonts ??= figma.listAvailableFontsAsync();
     const available = await this.fonts;
     const faces = facesToLoad({
@@ -310,10 +345,76 @@ export class FigmaAdapter implements HostAdapter {
     }
   }
 
+  /** Every face a text style can render with: its own, and each its bound variables reach. */
+  private async loadStyleFaces(style: TextStyle): Promise<void> {
+    const reach = async (alias: VariableAlias | undefined) => {
+      if (!alias) return [];
+      const variable = await figma.variables.getVariableByIdAsync(alias.id);
+      return variable ? this.resolvedValues(variable, 0) : [];
+    };
+    const families = [
+      style.fontName.family,
+      ...(await reach(style.boundVariables?.fontFamily)),
+    ].filter((f): f is string => typeof f === 'string');
+    const weights = [
+      undefined,
+      ...(await reach(style.boundVariables?.fontWeight)).map(weightOf),
+    ];
+    await figma.loadFontAsync(style.fontName);
+    await this.loadFaces(families, weights, style.fontName);
+  }
+
+  private async textStyle(name: string): Promise<TextStyle | undefined> {
+    return (await figma.getLocalTextStylesAsync()).find((s) => s.name === name);
+  }
+
+  async migrateStyleUsages(from: string, to: string): Promise<number> {
+    const [source, target] = [
+      await this.textStyle(from),
+      await this.textStyle(to),
+    ];
+    if (!source) return 0;
+    if (!target) throw new Error(`no style '${to}' to move usages onto`);
+    await this.loadStyleFaces(target);
+    let moved = 0;
+    for (const { node } of await source.getStyleConsumersAsync()) {
+      if (node.type !== 'TEXT') continue;
+      // A layer can use several styles across ranges: only the ranges on `from` move.
+      const segments = node.getStyledTextSegments(['textStyleId', 'fontName']);
+      for (const segment of segments) {
+        await figma.loadFontAsync(segment.fontName);
+      }
+      for (const segment of segments) {
+        if (segment.textStyleId !== source.id) continue;
+        await node.setRangeTextStyleIdAsync(
+          segment.start,
+          segment.end,
+          target.id,
+        );
+      }
+      moved++;
+    }
+    return moved;
+  }
+
+  async removeTextStyle(name: string): Promise<void> {
+    (await this.textStyle(name))?.remove();
+  }
+
+  async styleUses(names: string[]): Promise<Record<string, number>> {
+    const uses: Record<string, number> = {};
+    for (const name of names) {
+      const style = await this.textStyle(name);
+      uses[name] = style ? (await style.getStyleConsumersAsync()).length : 0;
+    }
+    return uses;
+  }
+
   async upsertTextStyle(wanted: {
     name: string;
     properties: Array<{ property: string; value: unknown; variable?: string }>;
     bindings: StyleBinding[];
+    deprecated?: string;
     stamp: Stamp;
   }): Promise<void> {
     const styles = await figma.getLocalTextStylesAsync();
@@ -377,6 +478,7 @@ export class FigmaAdapter implements HostAdapter {
         style.setBoundVariable(field, null);
       }
     }
+    style.description = withDeprecation(style.description, wanted.deprecated);
     style.setPluginData(STAMP_KEY, JSON.stringify(wanted.stamp));
   }
 }

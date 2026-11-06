@@ -59,9 +59,24 @@ figma.ui.onmessage = async (message: {
   const planned = plan(read.model, diffed, capacity, DEFAULT_POLICY);
 
   if (message.type === 'diff') {
+    // How many layers in this file still use what leaves (styles: removed, or deprecated).
+    const watched = [
+      ...diffed.styles.filter((s) => s.state === 'remove').map((s) => s.name),
+      ...read.model.styles
+        .filter((s) => s.deprecated !== undefined)
+        .map((s) => s.name),
+    ];
+    const deprecated =
+      read.model.collections.reduce(
+        (n, c) =>
+          n + c.variables.filter((v) => v.deprecated !== undefined).length,
+        0,
+      ) + read.model.styles.filter((s) => s.deprecated !== undefined).length;
     figma.ui.postMessage({
       type: 'diff',
       diff: diffed,
+      uses: await adapter.styleUses(watched),
+      deprecated,
       notes: planned.notes,
       opCount: planned.ops.length,
       bound: binding !== undefined,

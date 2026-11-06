@@ -1,5 +1,6 @@
 import type { FigmaType } from '@vertekum/ext-export-figma';
 import type { Binding } from './binding';
+import type { Retirement } from './retire';
 
 /**
  * The host-agnostic vocabulary. Core never imports a host API — each plugin package implements
@@ -21,6 +22,8 @@ export interface SnapshotVariable {
   type: FigmaType;
   valuesByMode: Record<string, unknown>;
   alias?: Record<string, string>;
+  /** The host description — its first line carries a deprecation (see `deprecation.ts`). */
+  description?: string;
   /** Present when tessellate wrote it before; absent on foreign variables. */
   stamp?: Stamp;
 }
@@ -44,6 +47,7 @@ export interface SnapshotStyle {
   properties: Array<{ property: string; value: unknown; variable?: string }>;
   /** The members a host holds bound, where it can say. */
   bindings?: StyleBinding[];
+  description?: string;
   stamp?: Stamp;
 }
 
@@ -65,6 +69,8 @@ export interface HostAdapter {
       name: string;
       type: FigmaType;
       valuesByMode: Record<string, unknown>;
+      /** The model's deprecation; undefined lifts any the host carries. */
+      deprecated?: string;
       stamp: Stamp;
     },
   ): Promise<void>;
@@ -82,14 +88,23 @@ export interface HostAdapter {
     name: string;
     properties: Array<{ property: string; value: unknown; variable?: string }>;
     bindings: StyleBinding[];
+    deprecated?: string;
     stamp: Stamp;
   }): Promise<void>;
+  /** Moves every layer in this document using style `from` onto `to`; returns how many moved. */
+  migrateStyleUsages(from: string, to: string): Promise<number>;
+  removeTextStyle(name: string): Promise<void>;
+  removeVariable(collection: string, name: string): Promise<void>;
+  /** Removes a collection; refuses one that still holds variables. */
+  removeCollection(name: string): Promise<void>;
+  /** How many layers in this document use each named style. */
+  styleUses(names: string[]): Promise<Record<string, number>>;
   /** The artifact this document tracks — document-level storage, shared by collaborators. */
   readBinding(): Promise<Binding | undefined>;
   writeBinding(binding: Binding): Promise<void>;
 }
 
-export type VariableState = 'add' | 'update' | 'unchanged' | 'drift';
+export type VariableState = 'add' | 'update' | 'unchanged' | 'drift' | 'remove';
 
 export interface VariableDiff {
   name: string;
@@ -111,12 +126,16 @@ export interface StyleDiff {
   name: string;
   kind: 'text' | 'effect';
   state: VariableState;
+  /** `remove`: the model's style that takes this one's usages, when exactly one does. */
+  replacement?: string;
 }
 
 export interface ModelDiff {
   collections: CollectionDiff[];
   styles: StyleDiff[];
   counts: Record<VariableState, number>;
+  /** Everything tessellate made that the model no longer holds (see `retire.ts`). */
+  retired: Retirement;
 }
 
 export type Op =
@@ -128,6 +147,7 @@ export type Op =
       name: string;
       type: FigmaType;
       valuesByMode: Record<string, unknown>;
+      deprecated?: string;
       stamp: Stamp;
     }
   | {
@@ -146,8 +166,13 @@ export type Op =
         variable?: string;
       }>;
       bindings: StyleBinding[];
+      deprecated?: string;
       stamp: Stamp;
-    };
+    }
+  | { op: 'migrateStyleUsages'; from: string; to: string }
+  | { op: 'removeTextStyle'; name: string }
+  | { op: 'removeVariable'; collection: string; name: string }
+  | { op: 'removeCollection'; collection: string };
 
 export interface Plan {
   ops: Op[];
@@ -156,14 +181,17 @@ export interface Plan {
 }
 
 export interface PlanPolicy {
-  /** v1 is delete-free by design; the field exists so the default is a statement, not an absence. */
-  deletes: 'never';
+  /**
+   * `retired`: whatever tessellate made that the model no longer holds is removed — a token
+   * removed from the source is removed on purpose. `never` keeps it (and says how much).
+   */
+  deletes: 'retired' | 'never';
   /** What to do when a collection's modes exceed the seat's capacity. */
   modeFallback: 'split-collections' | 'fail';
 }
 
 export const DEFAULT_POLICY: PlanPolicy = {
-  deletes: 'never',
+  deletes: 'retired',
   modeFallback: 'split-collections',
 };
 

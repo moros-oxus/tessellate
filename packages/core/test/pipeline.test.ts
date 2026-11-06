@@ -26,7 +26,7 @@ test('intake validates and pins the version', async () => {
   );
   const unsupported = await readModel('{"version": "draft.03"}');
   expect('issues' in unsupported && unsupported.issues[0]?.message).toMatch(
-    /version "draft\.03" is not supported \(supported: draft\.04\)/,
+    /version "draft\.03" is not supported \(supported: draft\.05\)/,
   );
   const notJson = await readModel('nope');
   expect('issues' in notJson && notJson.issues[0]?.message).toMatch(/not JSON/);
@@ -117,7 +117,7 @@ test('text styles apply with their bindings; the policy states its deletes', asy
   const m = await model();
   const host = new FakeHost();
   const p = plan(m, diff(m, await host.snapshot()), undefined);
-  expect(p.notes[0]).toBe('deletes: never (policy)');
+  expect(p.notes[0]).toBe('deletes: retired entities (policy)');
   await apply(p, host);
   const style = host.styles.get('typography/body');
   expect(style?.properties.some((prop) => prop.property === 'font-size')).toBe(

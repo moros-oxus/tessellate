@@ -6,7 +6,7 @@
 
 type VariableDiff = {
   name: string;
-  state: 'add' | 'update' | 'unchanged' | 'drift';
+  state: 'add' | 'update' | 'unchanged' | 'drift' | 'remove';
   details: string[];
 };
 type CollectionDiff = {
@@ -19,9 +19,13 @@ type DiffMessage = {
   type: 'diff';
   diff: {
     collections: CollectionDiff[];
-    styles: Array<{ name: string; state: string }>;
+    styles: Array<{ name: string; state: string; replacement?: string }>;
     counts: Record<string, number>;
   };
+  /** Layers in this file using each removed or deprecated style. */
+  uses: Record<string, number>;
+  /** Variables and styles the model marks deprecated. */
+  deprecated: number;
   notes: string[];
   opCount: number;
   bound: boolean;
@@ -161,28 +165,53 @@ function renderDiff(message: DiffMessage): void {
   const { counts } = message.diff;
   $('summary').innerHTML =
     `${badge('add')} ${counts.add ?? 0} · ${badge('update')} ${counts.update ?? 0} · ` +
-    `${badge('drift')} ${counts.drift ?? 0} · ${badge('unchanged')} ${counts.unchanged ?? 0}` +
+    `${badge('drift')} ${counts.drift ?? 0} · ${badge('unchanged')} ${counts.unchanged ?? 0} · ` +
+    `${badge('remove')} ${counts.remove ?? 0}` +
+    (message.deprecated > 0 ? ` · ${message.deprecated} deprecated` : '') +
     ` — ${message.opCount} operation(s) planned`;
-  $('notes').innerHTML = message.notes.map((n) => `<li>${n}</li>`).join('');
-  $('detail').innerHTML = message.diff.collections
-    .map((collection) => {
-      const rows = collection.variables
-        .filter((v) => v.state !== 'unchanged')
-        .map(
-          (v) =>
-            `<li>${badge(v.state)} <code>${v.name}</code>${
-              v.details.length ? ` <small>${v.details.join('; ')}</small>` : ''
-            }</li>`,
-        )
-        .join('');
-      const modes = collection.missingModes.length
-        ? ` <small>+modes: ${collection.missingModes.join(', ')}</small>`
-        : '';
-      return `<details open><summary><strong>${collection.name}</strong>${
-        collection.exists ? '' : ' (new)'
-      }${modes}</summary><ul>${rows || '<li><small>no changes</small></li>'}</ul></details>`;
-    })
+  $('notes').innerHTML = message.notes
+    .map((n) => `<li>${esc(n)}</li>`)
     .join('');
+  const usedBy = (name: string) => {
+    const n = message.uses[name];
+    return n === undefined ? '' : ` <small>used by ${n} layer(s) here</small>`;
+  };
+  const styleRows = message.diff.styles
+    .filter((s) => s.state !== 'unchanged')
+    .map(
+      (s) =>
+        `<li>${badge(s.state)} <code>${esc(s.name)}</code>${
+          s.replacement
+            ? ` → <code>${esc(s.replacement)}</code> <small>(usages move)</small>`
+            : ''
+        }${usedBy(s.name)}</li>`,
+    )
+    .join('');
+  $('detail').innerHTML =
+    message.diff.collections
+      .map((collection) => {
+        const rows = collection.variables
+          .filter((v) => v.state !== 'unchanged')
+          .map(
+            (v) =>
+              `<li>${badge(v.state)} <code>${esc(v.name)}</code>${
+                v.details.length
+                  ? ` <small>${esc(v.details.join('; '))}</small>`
+                  : ''
+              }</li>`,
+          )
+          .join('');
+        const modes = collection.missingModes.length
+          ? ` <small>+modes: ${collection.missingModes.join(', ')}</small>`
+          : '';
+        return `<details open><summary><strong>${esc(collection.name)}</strong>${
+          collection.exists ? '' : ' (new)'
+        }${modes}</summary><ul>${rows || '<li><small>no changes</small></li>'}</ul></details>`;
+      })
+      .join('') +
+    (styleRows
+      ? `<details open><summary><strong>text styles</strong></summary><ul>${styleRows}</ul></details>`
+      : '');
   // Nothing to write and nothing to (re)bind → nothing to apply.
   const bindOnly = !message.bound || (rebind && message.mismatch !== undefined);
   ($('apply') as HTMLButtonElement).disabled =
@@ -215,15 +244,31 @@ window.onmessage = (event: MessageEvent) => {
     const { report } = message;
     // The report PERSISTS in its own element — the re-diff below repaints summary/detail,
     // and a failure the user cannot read is a failure that did not happen.
-    $('report').innerHTML =
+    const failed =
       report.failed.length === 0
         ? ''
         : `<strong>applied ${report.applied}, FAILED ${report.failed.length}:</strong><ul>${report.failed
             .map(
               (f: { op: string; detail: string; error: string }) =>
-                `<li>${f.op} <code>${f.detail}</code>: ${f.error}</li>`,
+                `<li>${esc(f.op)} <code>${esc(f.detail)}</code>: ${esc(f.error)}</li>`,
             )
             .join('')}</ul>`;
+    // What happened to the library, as lines to paste into its release notes: files using the
+    // published library only learn of a removal when it is published.
+    const lines = [
+      ...report.removed.map((r: string) => `Removed ${r}`),
+      ...report.migrated.map(
+        (m: { from: string; to: string; layers: number }) =>
+          `Moved ${m.layers} layer(s) from style ${m.from} to ${m.to}`,
+      ),
+      ...report.deprecated.map((d: string) => `Deprecated ${d}`),
+    ];
+    const library = lines.length
+      ? `<details class="library" open><summary>library changes (${lines.length}) — for the release notes</summary><pre>${esc(
+          lines.join('\n'),
+        )}</pre></details>`
+      : '';
+    $('report').innerHTML = failed + library;
     // A clean apply wrote the binding — a rebind is spent.
     if (report.failed.length === 0) rebind = false;
     // Re-diff so the panel shows the post-apply truth (idempotence made visible).

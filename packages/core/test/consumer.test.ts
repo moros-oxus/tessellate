@@ -41,7 +41,7 @@ test('a binding names the artifact, its compositions, version and time', async (
   expect(binding).toEqual({
     target: 'figma-brands',
     compositions: ['default', 'alt'],
-    modelVersion: 'draft.04',
+    modelVersion: 'draft.05',
     appliedAt: '2026-09-23T12:00:00.000Z',
     label: 'figma-brands · default + alt',
   });
@@ -148,7 +148,13 @@ test('capacity 1: the merged collection splits per composition/context, and says
   expect(hostDrift(await host.snapshot()).count).toBe(0);
   // …and re-dropping the same model at the same capacity has nothing left to apply (QA 17).
   const again = diff(brands, await host.snapshot(), 1);
-  expect(again.counts).toEqual({ add: 0, update: 0, drift: 0, unchanged: 5 });
+  expect(again.counts).toEqual({
+    add: 0,
+    update: 0,
+    drift: 0,
+    unchanged: 5,
+    remove: 0,
+  });
   expect(plan(brands, again, 1).ops).toEqual([]);
 });
 

@@ -119,6 +119,10 @@ export function styleForm(
       values: { default: normalizeNumbers(style.properties) },
       alias: {},
       bindings,
+      // Only when set, so a style that isn't deprecated keeps the stamp it already has.
+      ...(style.deprecated !== undefined
+        ? { deprecated: style.deprecated }
+        : {}),
     }),
   };
 }

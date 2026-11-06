@@ -11,6 +11,7 @@ export {
   parseBinding,
 } from './binding';
 export { type CompositionReadout, compositionReadout } from './compositions';
+export { deprecationIn, withDeprecation } from './deprecation';
 export { diff, type HostDrift, hostDrift } from './diff';
 export { FakeHost } from './fake-host';
 export {
@@ -19,6 +20,7 @@ export {
   SUPPORTED_MODEL_VERSIONS,
 } from './model';
 export { plan } from './plan';
+export { type RetiredStyle, type Retirement, retired } from './retire';
 export { type StyleForm, styleForm } from './style-form';
 export {
   type CollectionDiff,
