@@ -1,5 +1,6 @@
 import type { FigmaModel } from '@vertekum/ext-export-figma';
 import { fit, partOf } from './layout';
+import { styleForm } from './style-form';
 import type { ModelDiff } from './types';
 import {
   appliedForm,
@@ -19,6 +20,9 @@ import {
  * `split-collections` fallback rewrites that collection into sibling single-mode collections
  * (`color-mode/dark`) — decided by `fit` (shared with diff), visible in the plan's notes,
  * superseding any static output-side strategy.
+ *
+ * Text styles bind their members to the model's variables where `styleForm` (shared with diff)
+ * allows; a reference it can't bind is applied as a plain value, and the notes say why.
  */
 
 function stampFor(
@@ -104,16 +108,14 @@ export function plan(
       notes.push(`style '${style.name}' (${style.kind}) is not applied in v1`);
       continue;
     }
+    const form = styleForm(style, model, capacity, policy);
+    for (const note of form.notes) if (!notes.includes(note)) notes.push(note);
     ops.push({
       op: 'upsertTextStyle',
       name: style.name,
-      properties: style.properties,
-      stamp: stampFor(
-        'styles',
-        style.name,
-        model.version,
-        appliedForm({ default: style.properties }, undefined),
-      ),
+      properties: form.properties,
+      bindings: form.bindings,
+      stamp: stampFor('styles', style.name, model.version, form.applied),
     });
   }
 

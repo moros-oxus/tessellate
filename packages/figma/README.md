@@ -47,6 +47,13 @@ Text styles take their font family and weight from the model: the weight picks t
 family's own upright style (`Bold`, `SemiBold`, `Semi Bold` alike), falling to the nearest
 weight the family has. The family must be available to Figma.
 
+Where a token's member is a reference, the style **binds** it to the variable: font family,
+size, weight, and a letter spacing in px. A bound style follows the mode of the frame that
+uses it, so one style renders each brand's family in that brand's mode. Each mode's family
+must be installed for the style to render in that mode. Line height is applied as a fixed
+percentage and never bound, because Figma reads a bound line height as pixels and a token
+line height is a multiplier. The plan notes name every reference left unbound, and why.
+
 ## One file to drop
 
 A model may hold **several compositions** — two brands, say — already merged by the
@@ -83,3 +90,4 @@ and the plan splits every over-budget collection into single-mode siblings
 (`color-mode/acme/light`), naming the compositions involved in the plan notes before
 anything is written. Each split part is stamped with what it holds, so a split file reads
 as clean on the next open. The setting is not remembered: tick it again for a split file.
+A split part holds one mode, so text styles there keep plain values instead of binding.

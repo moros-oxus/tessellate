@@ -6,6 +6,7 @@ import { diff } from '../src/diff';
 import { FakeHost } from '../src/fake-host';
 import { readModel } from '../src/model';
 import { plan } from '../src/plan';
+import { stable } from '../src/types';
 
 const FIXTURE = readFileSync(
   join(import.meta.dirname, 'fixtures/showcase.model.json'),
@@ -168,4 +169,91 @@ test('a lossy host read of style properties is not a pending change', async () =
   expect(after.styles[0]?.state).toBe('unchanged');
   const planned = plan(m, after, undefined);
   expect(planned.ops).toEqual([]);
+});
+
+const TYPOGRAPHY = readFileSync(
+  join(import.meta.dirname, 'fixtures/typography.model.json'),
+  'utf8',
+);
+
+async function typography() {
+  const read = await readModel(TYPOGRAPHY);
+  if ('issues' in read) throw new Error(JSON.stringify(read.issues));
+  return read.model;
+}
+
+test('text styles bind to the model variables; re-diff is a no-op', async () => {
+  const m = await typography();
+  const host = new FakeHost();
+  const p = plan(m, diff(m, await host.snapshot()), undefined);
+  expect(p.notes).toContain(
+    "style 'typography/heading': line-height not bound to 'font/leading/snug' — a host reads a bound line height as pixels, the token is a multiplier",
+  );
+  const report = await apply(p, host);
+  expect(report.failed).toEqual([]);
+  expect(host.styles.get('typography/heading')?.bindings).toEqual([
+    {
+      property: 'font-family',
+      collection: 'core',
+      variable: 'font/family/sans',
+    },
+    { property: 'font-size', collection: 'core', variable: 'font/size/200' },
+    {
+      property: 'font-weight',
+      collection: 'core',
+      variable: 'font/weight/bold',
+    },
+    {
+      property: 'letter-spacing',
+      collection: 'core',
+      variable: 'font/tracking/tight',
+    },
+  ]);
+  expect(host.styles.get('typography/body')?.bindings).toEqual([]);
+
+  const after = diff(m, await host.snapshot());
+  expect(after.styles.every((s) => s.state === 'unchanged')).toBe(true);
+  expect(plan(m, after, undefined).ops).toEqual([]);
+});
+
+test('a style stamped before bindings existed re-applies once', async () => {
+  const m = await typography();
+  const host = new FakeHost();
+  await apply(plan(m, diff(m, await host.snapshot()), undefined), host);
+
+  // What the previous plugin stamped: the properties only, nothing bound.
+  for (const style of host.styles.values()) {
+    if (!style.stamp) continue;
+    style.stamp = {
+      ...style.stamp,
+      applied: stable({ values: { default: style.properties }, alias: {} }),
+    };
+    style.bindings = [];
+  }
+
+  const stale = diff(m, await host.snapshot());
+  expect(stale.styles.every((s) => s.state === 'update')).toBe(true);
+  await apply(plan(m, stale, undefined), host);
+  expect(host.styles.get('typography/heading')?.bindings?.length).toBe(4);
+  const settled = diff(m, await host.snapshot());
+  expect(settled.styles.every((s) => s.state === 'unchanged')).toBe(true);
+});
+
+test('a seat that splits the collection binds nothing, says so, and re-applies when it changes', async () => {
+  const m = await typography();
+  const host = new FakeHost();
+  const p = plan(m, diff(m, await host.snapshot(), 1), 1);
+  expect(p.notes).toContain(
+    "style 'typography/heading': not bound to 'core' variables — the collection is split for this seat",
+  );
+  await apply(p, host);
+  expect(host.styles.get('typography/heading')?.bindings).toEqual([]);
+
+  // The whole-collection seat binds — the stamp carried the bindings, so the styles update.
+  const roomier = diff(m, await host.snapshot());
+  expect(
+    roomier.styles.find((s) => s.name === 'typography/heading')?.state,
+  ).toBe('update');
+  await apply(plan(m, roomier, undefined), host);
+  expect(host.styles.get('typography/heading')?.bindings?.length).toBe(4);
 });

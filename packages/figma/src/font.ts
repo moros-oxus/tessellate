@@ -86,3 +86,58 @@ export function fontStyleFor(
   }
   return best?.style ?? 'Regular';
 }
+
+/** A host letter spacing: pixels, or a percentage of the font size. */
+export interface LetterSpacingValue {
+  unit: 'PIXELS' | 'PERCENT';
+  value: number;
+}
+
+/**
+ * A style's `letter-spacing` (`-0.96px`, `0.02em`) as a host letter spacing; `em` is a fraction
+ * of the font size, so it becomes a percentage. Units it can't place are not guessed at.
+ */
+export function letterSpacingOf(
+  value: unknown,
+): LetterSpacingValue | undefined {
+  if (value === 0) return { unit: 'PIXELS', value: 0 };
+  if (typeof value !== 'string') return undefined;
+  const match = /^\s*(-?\d*\.?\d+)\s*(px|em)\s*$/.exec(value);
+  if (!match) return undefined;
+  const amount = Number(match[1]);
+  return match[2] === 'em'
+    ? { unit: 'PERCENT', value: Math.round(amount * 100 * 10_000) / 10_000 }
+    : { unit: 'PIXELS', value: amount };
+}
+
+/**
+ * Every face a bound style can resolve to. A host resolves a bound family or weight on its
+ * own (in the variable's default mode, and in each mode the style is used in), and refuses
+ * to bind into a face that isn't loaded — so each family the style can take, at each weight
+ * it can take, is loaded before binding. `keepStyle` covers the step in between: a family
+ * bound before the weight keeps the plain style name. Families not installed load nothing.
+ */
+export function facesToLoad(input: {
+  families: string[];
+  weights: Array<number | undefined>;
+  keepStyle: string | undefined;
+  stylesOf: (family: string) => string[];
+}): Array<{ family: string; style: string }> {
+  const faces = new Map<string, { family: string; style: string }>();
+  for (const family of new Set(input.families)) {
+    const available = input.stylesOf(family);
+    if (available.length === 0) continue;
+    const styles = new Set(
+      input.weights.map((weight) => fontStyleFor(weight, available)),
+    );
+    if (input.keepStyle && available.includes(input.keepStyle)) {
+      styles.add(input.keepStyle);
+    }
+    for (const style of styles) {
+      if (available.includes(style)) {
+        faces.set(`${family}\u0000${style}`, { family, style });
+      }
+    }
+  }
+  return [...faces.values()];
+}

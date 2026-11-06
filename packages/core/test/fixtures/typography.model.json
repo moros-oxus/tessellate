@@ -1,0 +1,317 @@
+{
+  "version": "draft.04",
+  "source": {
+    "target": "figma",
+    "compositions": ["acme", "globex"],
+    "generator": "@vertekum/ext-export-figma",
+    "notices": [],
+    "notAvailable": {
+      "collection": "NOT_AVAILABLE",
+      "variables": {
+        "FLOAT": "NOT_AVAILABLE/FLOAT"
+      }
+    },
+    "fingerprint": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "collections": [
+    {
+      "name": "core",
+      "modes": ["acme", "globex"],
+      "modeSources": {
+        "acme": {
+          "composition": "acme"
+        },
+        "globex": {
+          "composition": "globex"
+        }
+      },
+      "variables": [
+        {
+          "name": "font/family/sans",
+          "type": "STRING",
+          "valuesByMode": {
+            "acme": "Inter",
+            "globex": "Lora"
+          },
+          "source": {
+            "$type": "fontFamily",
+            "$value": ["Inter", "sans-serif"]
+          },
+          "scopes": [],
+          "codeSyntax": {},
+          "sources": {
+            "acme": "acme/core",
+            "globex": "globex/core"
+          }
+        },
+        {
+          "name": "font/size/200",
+          "type": "FLOAT",
+          "valuesByMode": {
+            "acme": 20,
+            "globex": 20
+          },
+          "source": {
+            "$type": "dimension",
+            "$value": {
+              "value": 20,
+              "unit": "px"
+            }
+          },
+          "scopes": [],
+          "codeSyntax": {},
+          "sources": {
+            "acme": "acme/core",
+            "globex": "globex/core"
+          }
+        },
+        {
+          "name": "font/weight/bold",
+          "type": "FLOAT",
+          "valuesByMode": {
+            "acme": 700,
+            "globex": 700
+          },
+          "source": {
+            "$type": "fontWeight",
+            "$value": 700
+          },
+          "scopes": [],
+          "codeSyntax": {},
+          "sources": {
+            "acme": "acme/core",
+            "globex": "globex/core"
+          }
+        },
+        {
+          "name": "font/weight/black",
+          "type": "FLOAT",
+          "valuesByMode": {
+            "globex": 900
+          },
+          "source": {
+            "$type": "fontWeight",
+            "$value": 900
+          },
+          "scopes": [],
+          "codeSyntax": {},
+          "alias": {
+            "acme": "NOT_AVAILABLE/FLOAT"
+          },
+          "sources": {
+            "acme": "acme/core",
+            "globex": "globex/core"
+          }
+        },
+        {
+          "name": "font/tracking/tight",
+          "type": "FLOAT",
+          "valuesByMode": {
+            "acme": -0.5,
+            "globex": -0.5
+          },
+          "source": {
+            "$type": "dimension",
+            "$value": {
+              "value": -0.5,
+              "unit": "px"
+            }
+          },
+          "scopes": [],
+          "codeSyntax": {},
+          "sources": {
+            "acme": "acme/core",
+            "globex": "globex/core"
+          }
+        },
+        {
+          "name": "font/leading/snug",
+          "type": "FLOAT",
+          "valuesByMode": {
+            "acme": 1.25,
+            "globex": 1.25
+          },
+          "source": {
+            "$type": "number",
+            "$value": 1.25
+          },
+          "scopes": [],
+          "codeSyntax": {},
+          "sources": {
+            "acme": "acme/core",
+            "globex": "globex/core"
+          }
+        }
+      ]
+    },
+    {
+      "name": "NOT_AVAILABLE",
+      "modes": ["default"],
+      "variables": [
+        {
+          "name": "NOT_AVAILABLE/FLOAT",
+          "type": "FLOAT",
+          "valuesByMode": {
+            "default": 0
+          },
+          "scopes": [],
+          "codeSyntax": {}
+        }
+      ]
+    }
+  ],
+  "styles": [
+    {
+      "kind": "text",
+      "name": "typography/heading",
+      "properties": [
+        {
+          "property": "font-family",
+          "value": "Inter, sans-serif",
+          "variable": "font/family/sans"
+        },
+        {
+          "property": "font-size",
+          "value": "20px",
+          "variable": "font/size/200"
+        },
+        {
+          "property": "font-weight",
+          "value": 700,
+          "variable": "font/weight/bold"
+        },
+        {
+          "property": "letter-spacing",
+          "value": "-0.5px",
+          "variable": "font/tracking/tight"
+        },
+        {
+          "property": "line-height",
+          "value": 1.25,
+          "variable": "font/leading/snug"
+        }
+      ],
+      "source": {
+        "$type": "typography",
+        "$value": {
+          "fontFamily": "{font.family.sans}",
+          "fontSize": "{font.size.200}",
+          "fontWeight": "{font.weight.bold}",
+          "letterSpacing": "{font.tracking.tight}",
+          "lineHeight": "{font.leading.snug}"
+        }
+      }
+    },
+    {
+      "kind": "text",
+      "name": "typography/display",
+      "properties": [
+        {
+          "property": "font-family",
+          "value": "Inter, sans-serif",
+          "variable": "font/family/sans"
+        },
+        {
+          "property": "font-size",
+          "value": "20px",
+          "variable": "font/size/200"
+        },
+        {
+          "property": "font-weight",
+          "value": 900,
+          "variable": "font/weight/black"
+        },
+        {
+          "property": "letter-spacing",
+          "value": "0.02em",
+          "variable": "font/tracking/wide"
+        },
+        {
+          "property": "line-height",
+          "value": 1.1
+        }
+      ],
+      "source": {
+        "$type": "typography",
+        "$value": {
+          "fontFamily": "{font.family.sans}",
+          "fontSize": "{font.size.200}",
+          "fontWeight": "{font.weight.black}",
+          "letterSpacing": "{font.tracking.wide}",
+          "lineHeight": 1.1
+        }
+      }
+    },
+    {
+      "kind": "text",
+      "name": "typography/body",
+      "properties": [
+        {
+          "property": "font-family",
+          "value": "Inter, sans-serif"
+        },
+        {
+          "property": "font-size",
+          "value": "16px"
+        },
+        {
+          "property": "font-weight",
+          "value": 400
+        },
+        {
+          "property": "letter-spacing",
+          "value": "0px"
+        },
+        {
+          "property": "line-height",
+          "value": 1.5
+        }
+      ],
+      "source": {
+        "$type": "typography",
+        "$value": {
+          "fontFamily": ["Inter", "sans-serif"],
+          "fontSize": {
+            "value": 16,
+            "unit": "px"
+          },
+          "fontWeight": 400,
+          "letterSpacing": {
+            "value": 0,
+            "unit": "px"
+          },
+          "lineHeight": 1.5
+        }
+      }
+    },
+    {
+      "kind": "text",
+      "name": "typography/caption",
+      "properties": [
+        {
+          "property": "font-family",
+          "value": "Inter, sans-serif",
+          "variable": "font/size/200"
+        },
+        {
+          "property": "font-size",
+          "value": "20px",
+          "variable": "font/size/200"
+        },
+        {
+          "property": "letter-spacing",
+          "value": "0.05em",
+          "variable": "font/tracking/tight"
+        }
+      ],
+      "source": {
+        "$type": "typography",
+        "$value": {
+          "fontFamily": "{font.size.200}",
+          "fontSize": "{font.size.200}",
+          "letterSpacing": "{font.tracking.tight}"
+        }
+      }
+    }
+  ]
+}

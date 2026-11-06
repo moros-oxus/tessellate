@@ -6,8 +6,27 @@ import {
   type SnapshotCollection,
   type SnapshotVariable,
   type Stamp,
+  type StyleBinding,
 } from '@tessellate/core';
-import { fontStyleFor, weightOf } from './font';
+import { facesToLoad, fontStyleFor, letterSpacingOf, weightOf } from './font';
+
+/** The model's style properties → the text-style fields a variable binds to. */
+const TEXT_FIELDS: Record<string, VariableBindableTextField> = {
+  'font-family': 'fontFamily',
+  'font-size': 'fontSize',
+  'font-weight': 'fontWeight',
+  'letter-spacing': 'letterSpacing',
+};
+
+/** Every field tessellate writes a plain value to — a stale binding on one would hide it. */
+const WRITTEN_FIELDS: VariableBindableTextField[] = [
+  'fontFamily',
+  'fontStyle',
+  'fontSize',
+  'fontWeight',
+  'letterSpacing',
+  'lineHeight',
+];
 
 /**
  * The Figma implementation of the host adapter — the only file that talks to `figma.*`.
@@ -211,9 +230,90 @@ export class FigmaAdapter implements HostAdapter {
       .map((font) => font.fontName.style);
   }
 
+  /** Every mode's value of a variable, aliases followed (into any collection). */
+  private async modeValues(
+    collection: string,
+    name: string,
+  ): Promise<unknown[]> {
+    const { variable } = await this.variable(collection, name);
+    return variable ? this.resolvedValues(variable, 0) : [];
+  }
+
+  private async resolvedValues(
+    variable: Variable,
+    depth: number,
+  ): Promise<unknown[]> {
+    const out: unknown[] = [];
+    for (const value of Object.values(variable.valuesByMode)) {
+      if (
+        value !== null &&
+        typeof value === 'object' &&
+        (value as { type?: string }).type === 'VARIABLE_ALIAS'
+      ) {
+        if (depth > 8) continue; // a cycle is the host's to report, not ours to loop on
+        const target = await figma.variables.getVariableByIdAsync(
+          (value as { id: string }).id,
+        );
+        if (target) out.push(...(await this.resolvedValues(target, depth + 1)));
+      } else {
+        out.push(value);
+      }
+    }
+    return out;
+  }
+
+  private async loadBoundFaces(
+    bindings: StyleBinding[],
+    plainFace: FontName | undefined,
+    plainWeight: unknown,
+  ): Promise<void> {
+    const familyBinding = bindings.find((b) => b.property === 'font-family');
+    const weightBinding = bindings.find((b) => b.property === 'font-weight');
+    if (!familyBinding && !weightBinding) return;
+    const families = [
+      ...(plainFace ? [plainFace.family] : []),
+      ...(familyBinding
+        ? await this.modeValues(
+            familyBinding.collection,
+            familyBinding.variable,
+          )
+        : []),
+    ].filter((f): f is string => typeof f === 'string');
+    const weights = [
+      weightOf(plainWeight),
+      ...(weightBinding
+        ? (
+            await this.modeValues(
+              weightBinding.collection,
+              weightBinding.variable,
+            )
+          ).map(weightOf)
+        : []),
+    ];
+    this.fonts ??= figma.listAvailableFontsAsync();
+    const available = await this.fonts;
+    const faces = facesToLoad({
+      families,
+      weights,
+      keepStyle: plainFace?.style,
+      stylesOf: (family) =>
+        available
+          .filter((font) => font.fontName.family === family)
+          .map((font) => font.fontName.style),
+    });
+    for (const face of faces) {
+      try {
+        await figma.loadFontAsync(face);
+      } catch {
+        // Listed but unloadable: the binding itself reports what it can't reach.
+      }
+    }
+  }
+
   async upsertTextStyle(wanted: {
     name: string;
     properties: Array<{ property: string; value: unknown; variable?: string }>;
+    bindings: StyleBinding[];
     stamp: Stamp;
   }): Promise<void> {
     const styles = await figma.getLocalTextStylesAsync();
@@ -222,7 +322,10 @@ export class FigmaAdapter implements HostAdapter {
     style.name = wanted.name;
     const get = (property: string) =>
       wanted.properties.find((p) => p.property === property)?.value;
+
+    // 1. Plain values — what the style shows wherever no binding resolves.
     const family = get('font-family');
+    let plainFace: FontName | undefined;
     if (typeof family === 'string') {
       const name = family.split(',')[0]?.trim() ?? family;
       // The weight picks one of the family's OWN style names (they differ per family).
@@ -233,14 +336,46 @@ export class FigmaAdapter implements HostAdapter {
           await this.stylesOf(name),
         ),
       };
+      // 2. The font is loaded before anything binds over it.
       await figma.loadFontAsync(fontName);
       style.fontName = fontName;
+      plainFace = fontName;
     }
     const size = get('font-size');
     if (typeof size === 'string') style.fontSize = Number.parseFloat(size);
     const lineHeight = get('line-height');
     if (typeof lineHeight === 'number') {
       style.lineHeight = { unit: 'PERCENT', value: lineHeight * 100 };
+    }
+    const spacing = letterSpacingOf(get('letter-spacing'));
+    if (spacing) style.letterSpacing = spacing;
+
+    // 2b. Figma refuses to bind into a face that isn't loaded, and a bound family or weight
+    // resolves on its own (the variable's default mode first) — load every face it can reach.
+    await this.loadBoundFaces(wanted.bindings, plainFace, get('font-weight'));
+
+    // 3. Bind exactly the model's bindings; 4. unbind every field tessellate writes and the
+    // model no longer binds, so a re-apply leaves the model's bindings and no others.
+    const bound = new Set<VariableBindableTextField>();
+    for (const binding of wanted.bindings) {
+      const field = TEXT_FIELDS[binding.property];
+      if (!field) continue;
+      const { variable } = await this.variable(
+        binding.collection,
+        binding.variable,
+      );
+      if (!variable) {
+        throw new Error(
+          `no variable '${binding.collection}/${binding.variable}' to bind ${binding.property}`,
+        );
+      }
+      style.setBoundVariable(field, variable);
+      bound.add(field);
+    }
+    for (const field of WRITTEN_FIELDS) {
+      if (!bound.has(field) && style.boundVariables?.[field]) {
+        style.setBoundVariable(field, null);
+      }
     }
     style.setPluginData(STAMP_KEY, JSON.stringify(wanted.stamp));
   }

@@ -1,5 +1,10 @@
 import { expect, test } from 'vitest';
-import { fontStyleFor, weightOf } from '../src/font';
+import {
+  facesToLoad,
+  fontStyleFor,
+  letterSpacingOf,
+  weightOf,
+} from '../src/font';
 
 const openSans = [
   'Light',
@@ -40,4 +45,40 @@ test('font weights read as numbers, numeric strings or DTCG keywords', () => {
   expect(weightOf('extra-black')).toBe(950);
   expect(weightOf('{font.weight.bold}')).toBeUndefined();
   expect(weightOf(undefined)).toBeUndefined();
+});
+
+test('a letter spacing in px or em becomes a host letter spacing', () => {
+  expect(letterSpacingOf('-0.96px')).toEqual({ unit: 'PIXELS', value: -0.96 });
+  expect(letterSpacingOf('0px')).toEqual({ unit: 'PIXELS', value: 0 });
+  expect(letterSpacingOf('0.02em')).toEqual({ unit: 'PERCENT', value: 2 });
+  // Unitless zero is still zero; anything else is not guessed at.
+  expect(letterSpacingOf(0)).toEqual({ unit: 'PIXELS', value: 0 });
+  expect(letterSpacingOf('1rem')).toBeUndefined();
+  expect(letterSpacingOf('wide')).toBeUndefined();
+});
+
+test('binding loads every face the bound family and weight can resolve to', () => {
+  const available: Record<string, string[]> = {
+    'Open Sans': openSans,
+    Lora: ['Regular', 'Medium', 'Bold'],
+    Fraunces: ['Book', 'Black'],
+  };
+  const faces = facesToLoad({
+    // The plain family first, then every family the bound variable takes in any mode.
+    families: ['Lora', 'Open Sans', 'Fraunces', 'Not Installed'],
+    weights: [500, 700, 900, 0],
+    keepStyle: 'Medium',
+    stylesOf: (family) => available[family] ?? [],
+  });
+  // Each installed family, at each weight, by its own style names — plus the plain style
+  // name wherever the family has it (a bound family keeps the style until weight resolves).
+  expect(faces).toContainEqual({ family: 'Open Sans', style: 'Medium' });
+  expect(faces).toContainEqual({ family: 'Open Sans', style: 'Bold' });
+  expect(faces).toContainEqual({ family: 'Fraunces', style: 'Black' });
+  expect(faces).toContainEqual({ family: 'Lora', style: 'Medium' });
+  // A family that isn't installed has nothing to load; duplicates are dropped.
+  expect(faces.some((f) => f.family === 'Not Installed')).toBe(false);
+  expect(new Set(faces.map((f) => `${f.family}/${f.style}`)).size).toBe(
+    faces.length,
+  );
 });

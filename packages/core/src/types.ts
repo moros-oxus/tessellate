@@ -31,10 +31,19 @@ export interface SnapshotCollection {
   variables: SnapshotVariable[];
 }
 
+/** A style member bound to a host variable, addressed by collection — never by name alone. */
+export interface StyleBinding {
+  property: string;
+  collection: string;
+  variable: string;
+}
+
 export interface SnapshotStyle {
   kind: 'text' | 'effect';
   name: string;
   properties: Array<{ property: string; value: unknown; variable?: string }>;
+  /** The members a host holds bound, where it can say. */
+  bindings?: StyleBinding[];
   stamp?: Stamp;
 }
 
@@ -65,9 +74,14 @@ export interface HostAdapter {
     mode: string,
     target: string,
   ): Promise<void>;
+  /**
+   * Writes the plain values, then binds exactly `bindings` — a bindable member not listed is
+   * unbound, so a re-apply leaves the model's bindings and no others.
+   */
   upsertTextStyle(style: {
     name: string;
     properties: Array<{ property: string; value: unknown; variable?: string }>;
+    bindings: StyleBinding[];
     stamp: Stamp;
   }): Promise<void>;
   /** The artifact this document tracks — document-level storage, shared by collaborators. */
@@ -131,6 +145,7 @@ export type Op =
         value: unknown;
         variable?: string;
       }>;
+      bindings: StyleBinding[];
       stamp: Stamp;
     };
 

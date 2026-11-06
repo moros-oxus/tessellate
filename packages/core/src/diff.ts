@@ -1,5 +1,6 @@
 import type { FigmaModel, FigmaVariable } from '@vertekum/ext-export-figma';
 import { fit, partOf } from './layout';
+import { styleForm } from './style-form';
 import {
   appliedForm,
   type CollectionDiff,
@@ -170,7 +171,7 @@ export function diff(
     const hostStyle = snapshot.styles.find(
       (s) => s.name === wanted.name && s.kind === wanted.kind,
     );
-    const want = appliedForm({ default: wanted.properties }, undefined);
+    const want = styleForm(wanted, model, capacity, policy).applied;
     let state: VariableState;
     if (!hostStyle) state = 'add';
     else if (hostStyle.stamp?.applied === want) state = 'unchanged';

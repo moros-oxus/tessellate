@@ -5,6 +5,7 @@ import {
   type SnapshotCollection,
   type SnapshotStyle,
   type Stamp,
+  type StyleBinding,
   stable,
 } from './types';
 
@@ -101,9 +102,25 @@ export class FakeHost implements HostAdapter {
   async upsertTextStyle(style: {
     name: string;
     properties: SnapshotStyle['properties'];
+    bindings: StyleBinding[];
     stamp: Stamp;
   }): Promise<void> {
-    this.styles.set(style.name, { kind: 'text', ...style });
+    // Bindings are replaced, not merged — what a host's unbind-the-rest step leaves.
+    for (const binding of style.bindings) {
+      const exists = this.collections
+        .get(binding.collection)
+        ?.variables.some((v) => v.name === binding.variable);
+      if (!exists) {
+        throw new Error(
+          `no variable '${binding.collection}/${binding.variable}' to bind`,
+        );
+      }
+    }
+    this.styles.set(style.name, {
+      kind: 'text',
+      ...style,
+      bindings: [...style.bindings],
+    });
   }
 
   async readBinding(): Promise<Binding | undefined> {

@@ -39,6 +39,7 @@ export async function apply(
           await adapter.upsertTextStyle({
             name: op.name,
             properties: op.properties,
+            bindings: op.bindings,
             stamp: op.stamp,
           });
           break;

@@ -19,6 +19,7 @@ export {
   SUPPORTED_MODEL_VERSIONS,
 } from './model';
 export { plan } from './plan';
+export { type StyleForm, styleForm } from './style-form';
 export {
   type CollectionDiff,
   DEFAULT_POLICY,
@@ -33,6 +34,7 @@ export {
   type SnapshotStyle,
   type SnapshotVariable,
   type Stamp,
+  type StyleBinding,
   type StyleDiff,
   stable,
   type VariableDiff,
