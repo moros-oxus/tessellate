@@ -1,5 +1,5 @@
 {
-  "version": "draft.05",
+  "version": "draft.06",
   "source": {
     "target": "figma",
     "compositions": ["acme", "globex"],
@@ -141,6 +141,24 @@
             "acme": "acme/core",
             "globex": "globex/core"
           }
+        },
+        {
+          "name": "font/leading/title",
+          "type": "FLOAT",
+          "valuesByMode": {
+            "acme": 25,
+            "globex": 30
+          },
+          "source": {
+            "$type": "number",
+            "$value": 1.25
+          },
+          "sources": {
+            "acme": "theme",
+            "globex": "theme"
+          },
+          "scopes": [],
+          "codeSyntax": {}
         }
       ]
     },
@@ -310,6 +328,88 @@
           "fontFamily": "{font.size.200}",
           "fontSize": "{font.size.200}",
           "letterSpacing": "{font.tracking.tight}"
+        }
+      }
+    },
+    {
+      "kind": "text",
+      "name": "typography/title",
+      "properties": [
+        {
+          "property": "font-family",
+          "value": "Inter, sans-serif",
+          "variable": "font/family/sans"
+        },
+        {
+          "property": "font-size",
+          "value": "20px",
+          "variable": "font/size/200"
+        },
+        {
+          "property": "font-weight",
+          "value": 700,
+          "variable": "font/weight/bold"
+        },
+        {
+          "property": "letter-spacing",
+          "value": "-0.5px",
+          "variable": "font/tracking/tight"
+        },
+        {
+          "property": "line-height",
+          "value": "25px",
+          "variable": "font/leading/title"
+        }
+      ],
+      "source": {
+        "$type": "typography",
+        "$value": {
+          "fontFamily": "{font.family.sans}",
+          "fontSize": "{font.size.200}",
+          "fontWeight": "{font.weight.bold}",
+          "letterSpacing": "{font.tracking.tight}",
+          "lineHeight": "{font.leading.snug}"
+        }
+      }
+    },
+    {
+      "kind": "text",
+      "name": "typography/subtitle",
+      "properties": [
+        {
+          "property": "font-family",
+          "value": "Inter, sans-serif",
+          "variable": "font/family/sans"
+        },
+        {
+          "property": "font-size",
+          "value": "20px",
+          "variable": "font/size/200"
+        },
+        {
+          "property": "font-weight",
+          "value": 700,
+          "variable": "font/weight/bold"
+        },
+        {
+          "property": "letter-spacing",
+          "value": "-0.5px",
+          "variable": "font/tracking/tight"
+        },
+        {
+          "property": "line-height",
+          "value": "24px",
+          "variable": "font/family/sans"
+        }
+      ],
+      "source": {
+        "$type": "typography",
+        "$value": {
+          "fontFamily": "{font.family.sans}",
+          "fontSize": "{font.size.200}",
+          "fontWeight": "{font.weight.bold}",
+          "letterSpacing": "{font.tracking.tight}",
+          "lineHeight": "{font.leading.snug}"
         }
       }
     }

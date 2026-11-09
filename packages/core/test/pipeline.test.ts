@@ -26,7 +26,12 @@ test('intake validates and pins the version', async () => {
   );
   const unsupported = await readModel('{"version": "draft.03"}');
   expect('issues' in unsupported && unsupported.issues[0]?.message).toMatch(
-    /version "draft\.03" is not supported \(supported: draft\.05\)/,
+    /version "draft\.03" is not supported \(supported: draft\.06\)/,
+  );
+  // draft.05 line heights are multipliers; draft.06 gives px — a draft.05 model is re-exported.
+  const previous = await readModel('{"version": "draft.05"}');
+  expect('issues' in previous && previous.issues[0]?.message).toMatch(
+    /version "draft\.05" is not supported/,
   );
   const notJson = await readModel('nope');
   expect('issues' in notJson && notJson.issues[0]?.message).toMatch(/not JSON/);
@@ -187,10 +192,16 @@ test('text styles bind to the model variables; re-diff is a no-op', async () => 
   const host = new FakeHost();
   const p = plan(m, diff(m, await host.snapshot()), undefined);
   expect(p.notes).toContain(
-    "style 'typography/heading': line-height not bound to 'font/leading/snug' — a host reads a bound line height as pixels, the token is a multiplier",
+    "style 'typography/heading': line-height not bound to 'font/leading/snug' — a host reads a bound line height as pixels; the model gives a multiplier (1.25)",
   );
   const report = await apply(p, host);
   expect(report.failed).toEqual([]);
+  // A line height the model gives in px binds, like every other member.
+  expect(host.styles.get('typography/title')?.bindings).toContainEqual({
+    property: 'line-height',
+    collection: 'core',
+    variable: 'font/leading/title',
+  });
   expect(host.styles.get('typography/heading')?.bindings).toEqual([
     {
       property: 'font-family',

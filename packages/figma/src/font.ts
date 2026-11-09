@@ -87,6 +87,29 @@ export function fontStyleFor(
   return best?.style ?? 'Regular';
 }
 
+/** A host line height: pixels, or a percentage of the font size. */
+export interface LineHeightValue {
+  unit: 'PIXELS' | 'PERCENT';
+  value: number;
+}
+
+/**
+ * A style's `line-height` as a host line height: a px string (`68px`, the exporter's
+ * translation of a line-height token) stays pixels; a unitless multiplier (`1.5`) is a
+ * percentage of the font size. Units it can't place are not guessed at.
+ */
+export function lineHeightOf(value: unknown): LineHeightValue | undefined {
+  if (typeof value === 'number') {
+    return {
+      unit: 'PERCENT',
+      value: Math.round(value * 100 * 10_000) / 10_000,
+    };
+  }
+  if (typeof value !== 'string') return undefined;
+  const match = /^\s*(\d*\.?\d+)\s*px\s*$/.exec(value);
+  return match ? { unit: 'PIXELS', value: Number(match[1]) } : undefined;
+}
+
 /** A host letter spacing: pixels, or a percentage of the font size. */
 export interface LetterSpacingValue {
   unit: 'PIXELS' | 'PERCENT';

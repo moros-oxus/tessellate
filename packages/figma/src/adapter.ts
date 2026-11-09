@@ -9,7 +9,13 @@ import {
   type StyleBinding,
   withDeprecation,
 } from '@tessellate/core';
-import { facesToLoad, fontStyleFor, letterSpacingOf, weightOf } from './font';
+import {
+  facesToLoad,
+  fontStyleFor,
+  letterSpacingOf,
+  lineHeightOf,
+  weightOf,
+} from './font';
 
 /** The model's style properties → the text-style fields a variable binds to. */
 const TEXT_FIELDS: Record<string, VariableBindableTextField> = {
@@ -17,6 +23,7 @@ const TEXT_FIELDS: Record<string, VariableBindableTextField> = {
   'font-size': 'fontSize',
   'font-weight': 'fontWeight',
   'letter-spacing': 'letterSpacing',
+  'line-height': 'lineHeight',
 };
 
 /** Every field tessellate writes a plain value to — a stale binding on one would hide it. */
@@ -444,10 +451,8 @@ export class FigmaAdapter implements HostAdapter {
     }
     const size = get('font-size');
     if (typeof size === 'string') style.fontSize = Number.parseFloat(size);
-    const lineHeight = get('line-height');
-    if (typeof lineHeight === 'number') {
-      style.lineHeight = { unit: 'PERCENT', value: lineHeight * 100 };
-    }
+    const lineHeight = lineHeightOf(get('line-height'));
+    if (lineHeight) style.lineHeight = lineHeight;
     const spacing = letterSpacingOf(get('letter-spacing'));
     if (spacing) style.letterSpacing = spacing;
 

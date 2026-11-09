@@ -30,14 +30,16 @@ export interface StyleForm {
 
 /**
  * The variable type each bindable member takes. A bound value has to mean what the member
- * means, so `line-height` is absent: a token line height is a unitless multiplier, while a
- * host reads a line height bound to a variable as pixels.
+ * means: a host reads a bound letter spacing or line height as pixels, so those bind only when
+ * the model gives them in px. A line height is px when the exporter translated its variable
+ * (font size × multiplier); otherwise it's a unitless multiplier and stays a plain value.
  */
 const BINDABLE: Record<string, FigmaType> = {
   'font-family': 'STRING',
   'font-size': 'FLOAT',
   'font-weight': 'FLOAT',
   'letter-spacing': 'FLOAT',
+  'line-height': 'FLOAT',
 };
 
 export function styleForm(
@@ -66,14 +68,6 @@ export function styleForm(
       refuse(property, variable, 'the model has no such variable');
       continue;
     }
-    if (property === 'line-height') {
-      refuse(
-        property,
-        variable,
-        'a host reads a bound line height as pixels, the token is a multiplier',
-      );
-      continue;
-    }
     const wants = BINDABLE[property];
     if (wants === undefined) {
       refuse(property, variable, 'a text style cannot bind it');
@@ -95,6 +89,17 @@ export function styleForm(
         property,
         variable,
         `only a px letter spacing binds (the value is ${String(value)})`,
+      );
+      continue;
+    }
+    if (
+      property === 'line-height' &&
+      !(typeof value === 'string' && value.trim().endsWith('px'))
+    ) {
+      refuse(
+        property,
+        variable,
+        `a host reads a bound line height as pixels; the model gives a multiplier (${String(value)})`,
       );
       continue;
     }

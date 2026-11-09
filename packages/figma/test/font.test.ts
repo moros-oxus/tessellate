@@ -3,6 +3,7 @@ import {
   facesToLoad,
   fontStyleFor,
   letterSpacingOf,
+  lineHeightOf,
   weightOf,
 } from '../src/font';
 
@@ -55,6 +56,16 @@ test('a letter spacing in px or em becomes a host letter spacing', () => {
   expect(letterSpacingOf(0)).toEqual({ unit: 'PIXELS', value: 0 });
   expect(letterSpacingOf('1rem')).toBeUndefined();
   expect(letterSpacingOf('wide')).toBeUndefined();
+});
+
+test('a line height is px when the model gives px, a percentage when it gives a multiplier', () => {
+  expect(lineHeightOf('68px')).toEqual({ unit: 'PIXELS', value: 68 });
+  expect(lineHeightOf('19.43px')).toEqual({ unit: 'PIXELS', value: 19.43 });
+  expect(lineHeightOf(1.5)).toEqual({ unit: 'PERCENT', value: 150 });
+  expect(lineHeightOf(1.2143)).toEqual({ unit: 'PERCENT', value: 121.43 });
+  // Units it can't place are not guessed at.
+  expect(lineHeightOf('1.5rem')).toBeUndefined();
+  expect(lineHeightOf('normal')).toBeUndefined();
 });
 
 test('binding loads every face the bound family and weight can resolve to', () => {

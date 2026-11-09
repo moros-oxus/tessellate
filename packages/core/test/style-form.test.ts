@@ -48,12 +48,32 @@ test('family, size, weight and px letter-spacing bind, addressed by collection',
   expect(form.properties).toBe(styleOf(m, 'heading').properties);
 });
 
-test('line height never binds: a bound line height is read as pixels', async () => {
+test('a multiplier line height never binds: a bound line height is read as pixels', async () => {
   const m = await model();
   const form = styleForm(styleOf(m, 'heading'), m, undefined);
   expect(form.bindings.some((b) => b.property === 'line-height')).toBe(false);
   expect(form.notes).toEqual([
-    "style 'typography/heading': line-height not bound to 'font/leading/snug' — a host reads a bound line height as pixels, the token is a multiplier",
+    "style 'typography/heading': line-height not bound to 'font/leading/snug' — a host reads a bound line height as pixels; the model gives a multiplier (1.25)",
+  ]);
+});
+
+test('a px line height binds to its FLOAT variable', async () => {
+  const m = await model();
+  const form = styleForm(styleOf(m, 'title'), m, undefined);
+  expect(form.bindings).toContainEqual({
+    property: 'line-height',
+    collection: 'core',
+    variable: 'font/leading/title',
+  });
+  expect(form.notes).toEqual([]);
+});
+
+test('a px line height with a variable of another type is refused', async () => {
+  const m = await model();
+  const form = styleForm(styleOf(m, 'subtitle'), m, undefined);
+  expect(form.bindings.some((b) => b.property === 'line-height')).toBe(false);
+  expect(form.notes).toEqual([
+    "style 'typography/subtitle': line-height not bound to 'font/family/sans' — it needs a FLOAT variable, not STRING",
   ]);
 });
 

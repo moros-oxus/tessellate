@@ -48,11 +48,13 @@ family's own upright style (`Bold`, `SemiBold`, `Semi Bold` alike), falling to t
 weight the family has. The family must be available to Figma.
 
 Where a token's member is a reference, the style **binds** it to the variable: font family,
-size, weight, and a letter spacing in px. A bound style follows the mode of the frame that
-uses it, so one style renders each brand's family in that brand's mode. Each mode's family
-must be installed for the style to render in that mode. Line height is applied as a fixed
-percentage and never bound, because Figma reads a bound line height as pixels and a token
-line height is a multiplier. The plan notes name every reference left unbound, and why.
+size, weight, and a letter spacing or line height in px. A bound style follows the mode of the
+frame that uses it, so one style renders each brand's family in that brand's mode. Each mode's
+family must be installed for the style to render in that mode. Figma reads a bound line height
+as pixels, so a line height binds when the model gives it in px (its variable then holds the
+font size × the multiplier, per mode). A line height the model gives as a multiplier is applied
+as a fixed percentage and never bound. The plan notes name every reference left unbound, and
+why.
 
 ## Removed and deprecated tokens
 
